@@ -1,4 +1,4 @@
-# MarketPulse AI
+# Meridian Markets AI
 
 An AI-powered multi-user market intelligence web app built with Flask and Claude AI.
 
