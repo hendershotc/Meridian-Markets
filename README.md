@@ -1,3 +1,13 @@
+
+<img width="1718" height="880" alt="Markets Homepage" src="https://github.com/user-attachments/assets/a93c548f-ae61-4136-871a-aaab338914f8" />
+<img width="1718" height="932" alt="Sectors with AI" src="https://github.com/user-attachments/assets/036445ac-160a-4e65-9b87-baf4263d33fb" />
+<img width="1718" height="932" alt="Watchlist with AI" src="https://github.com/user-attachments/assets/cf54db81-ec56-4f54-b1d2-869923ecef12" />
+<img width="1718" height="932" alt="News from Mulitple Sources" src="https://github.com/user-attachments/assets/67dd6f95-93b3-47c7-9b20-5fa3d080beb0" />
+<img width="1718" height="932" alt="Built in AI Trading Bot Simulation" src="https://github.com/user-attachments/assets/36d910bb-481a-4e21-9a21-bf76e22657a8" />
+<img width="1718" height="951" alt="AI Trading Bot Conneted to Alpaca" src="https://github.com/user-attachments/assets/8aab50cc-af33-4959-b320-60c2ec392e2d" />
+
+
+
 # Meridian Markets AI
 
 An AI-powered multi-user market intelligence web app built with Flask and Claude AI.
