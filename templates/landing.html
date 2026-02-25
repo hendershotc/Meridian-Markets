@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meridian Markets - Intelligent Market Briefings</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --dark:    #0a0f1e;
+            --darker:  #060b14;
+            --accent:  #00d4aa;
+            --accent2: #0099ff;
+            --text:    #e8edf5;
+            --muted:   #6b7a99;
+            --card:    #111827;
+            --border:  #1e2d45;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--dark);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* BACKGROUND GRID */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(0,212,170,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,212,170,0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        nav {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 48px;
+            background: rgba(10,15,30,0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo {
+            font-family: 'DM Serif Display', serif;
+            font-size: 22px;
+            color: var(--accent);
+            text-decoration: none;
+            letter-spacing: -0.5px;
+        }
+
+        .logo span { color: var(--text); }
+
+        .nav-links { display: flex; gap: 16px; align-items: center; }
+
+        .nav-links a {
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover { color: var(--text); }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: var(--darker);
+        }
+
+        .btn-primary:hover { background: #00bfa0; transform: translateY(-1px); }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+        /* HERO */
+        .hero {
+            position: relative;
+            z-index: 1;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 120px 24px 80px;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 16px;
+            background: rgba(0,212,170,0.1);
+            border: 1px solid rgba(0,212,170,0.3);
+            border-radius: 100px;
+            font-size: 13px;
+            color: var(--accent);
+            font-weight: 500;
+            margin-bottom: 32px;
+            letter-spacing: 0.5px;
+        }
+
+        .hero h1 {
+            font-family: 'DM Serif Display', serif;
+            font-size: clamp(48px, 8vw, 88px);
+            line-height: 1.05;
+            letter-spacing: -2px;
+            margin-bottom: 24px;
+            max-width: 900px;
+        }
+
+        .hero h1 em {
+            font-style: italic;
+            color: var(--accent);
+        }
+
+        .hero p {
+            font-size: 18px;
+            color: var(--muted);
+            max-width: 560px;
+            line-height: 1.7;
+            margin-bottom: 48px;
+            font-weight: 300;
+        }
+
+        .hero-cta {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        /* TICKER TAPE */
+        .ticker-tape {
+            width: 100%;
+            overflow: hidden;
+            background: var(--card);
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            padding: 14px 0;
+            margin: 0;
+        }
+
+        .ticker-inner {
+            display: flex;
+            gap: 48px;
+            animation: ticker 30s linear infinite;
+            white-space: nowrap;
+        }
+
+        .ticker-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .ticker-item .symbol { color: var(--text); }
+        .ticker-item .up     { color: var(--accent); }
+        .ticker-item .down   { color: #ff5c7a; }
+
+        @keyframes ticker {
+            from { transform: translateX(0); }
+            to   { transform: translateX(-50%); }
+        }
+
+        /* FEATURES */
+        .features {
+            position: relative;
+            z-index: 1;
+            padding: 100px 48px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-label {
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 16px;
+        }
+
+        .section-title {
+            font-family: 'DM Serif Display', serif;
+            font-size: clamp(32px, 5vw, 52px);
+            letter-spacing: -1px;
+            margin-bottom: 64px;
+            max-width: 600px;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+        }
+
+        .feature-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 32px;
+            transition: border-color 0.2s, transform 0.2s;
+        }
+
+        .feature-card:hover {
+            border-color: rgba(0,212,170,0.3);
+            transform: translateY(-4px);
+        }
+
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            background: rgba(0,212,170,0.1);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            margin-bottom: 20px;
+        }
+
+        .feature-card h3 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .feature-card p {
+            font-size: 14px;
+            color: var(--muted);
+            line-height: 1.7;
+        }
+
+        .pro-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            background: rgba(0,212,170,0.15);
+            border: 1px solid rgba(0,212,170,0.3);
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: var(--accent);
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+
+        /* PRICING */
+        .pricing {
+            position: relative;
+            z-index: 1;
+            padding: 100px 48px;
+            background: var(--darker);
+            text-align: center;
+        }
+
+        .pricing-cards {
+            display: flex;
+            gap: 24px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 64px;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .pricing-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 40px;
+            flex: 1;
+            min-width: 280px;
+            text-align: left;
+        }
+
+        .pricing-card.featured {
+            border-color: var(--accent);
+            position: relative;
+        }
+
+        .pricing-card.featured::before {
+            content: 'Most Popular';
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--accent);
+            color: var(--darker);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            padding: 4px 12px;
+            border-radius: 100px;
+        }
+
+        .plan-name { font-size: 14px; color: var(--muted); font-weight: 500; margin-bottom: 8px; }
+        .plan-price { font-family: 'DM Serif Display', serif; font-size: 48px; color: var(--text); margin-bottom: 8px; }
+        .plan-price span { font-family: 'DM Sans', sans-serif; font-size: 16px; color: var(--muted); }
+        .plan-desc { font-size: 14px; color: var(--muted); margin-bottom: 32px; line-height: 1.6; }
+
+        .plan-features { list-style: none; margin-bottom: 32px; }
+        .plan-features li {
+            font-size: 14px;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .plan-features li:last-child { border-bottom: none; }
+        .check { color: var(--accent); font-weight: 700; }
+        .cross { color: var(--muted); }
+
+        /* CTA SECTION */
+        .cta-section {
+            position: relative;
+            z-index: 1;
+            padding: 100px 48px;
+            text-align: center;
+        }
+
+        .cta-section h2 {
+            font-family: 'DM Serif Display', serif;
+            font-size: clamp(32px, 5vw, 56px);
+            letter-spacing: -1px;
+            margin-bottom: 20px;
+        }
+
+        .cta-section p {
+            color: var(--muted);
+            font-size: 18px;
+            margin-bottom: 40px;
+            font-weight: 300;
+        }
+
+        footer {
+            position: relative;
+            z-index: 1;
+            border-top: 1px solid var(--border);
+            padding: 32px 48px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: var(--muted);
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a href="/" class="logo">Meridian<span>Markets</span> AI</a>
+    <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#pricing">Pricing</a>
+        <a href="/login" class="btn btn-outline">Log In</a>
+        <a href="/signup" class="btn btn-primary">Get Started Free</a>
+    </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+    <div class="hero-badge">Powered by Claude AI</div>
+    <h1>Your market,<br><em>intelligently</em> briefed.</h1>
+    <p>AI-powered stock analysis, sentiment signals, macro context, and personalized trading tips — delivered to your dashboard every morning before the bell.</p>
+    <div class="hero-cta">
+        <a href="/signup" class="btn btn-primary">Start for Free</a>
+        <a href="#features" class="btn btn-outline">See What's Inside</a>
+    </div>
+</section>
+
+<!-- TICKER TAPE -->
+<div class="ticker-tape">
+    <div class="ticker-inner">
+        <div class="ticker-item"><span class="symbol">MSFT</span><span class="up">+1.2%</span></div>
+        <div class="ticker-item"><span class="symbol">NVDA</span><span class="up">+3.4%</span></div>
+        <div class="ticker-item"><span class="symbol">AAPL</span><span class="down">-0.8%</span></div>
+        <div class="ticker-item"><span class="symbol">TSLA</span><span class="up">+2.1%</span></div>
+        <div class="ticker-item"><span class="symbol">AMZN</span><span class="up">+0.9%</span></div>
+        <div class="ticker-item"><span class="symbol">GOOGL</span><span class="down">-0.3%</span></div>
+        <div class="ticker-item"><span class="symbol">META</span><span class="up">+1.8%</span></div>
+        <div class="ticker-item"><span class="symbol">AMD</span><span class="up">+2.7%</span></div>
+        <div class="ticker-item"><span class="symbol">LLY</span><span class="up">+0.5%</span></div>
+        <div class="ticker-item"><span class="symbol">JPM</span><span class="down">-0.4%</span></div>
+        <!-- Duplicate for seamless loop -->
+        <div class="ticker-item"><span class="symbol">MSFT</span><span class="up">+1.2%</span></div>
+        <div class="ticker-item"><span class="symbol">NVDA</span><span class="up">+3.4%</span></div>
+        <div class="ticker-item"><span class="symbol">AAPL</span><span class="down">-0.8%</span></div>
+        <div class="ticker-item"><span class="symbol">TSLA</span><span class="up">+2.1%</span></div>
+        <div class="ticker-item"><span class="symbol">AMZN</span><span class="up">+0.9%</span></div>
+        <div class="ticker-item"><span class="symbol">GOOGL</span><span class="down">-0.3%</span></div>
+        <div class="ticker-item"><span class="symbol">META</span><span class="up">+1.8%</span></div>
+        <div class="ticker-item"><span class="symbol">AMD</span><span class="up">+2.7%</span></div>
+        <div class="ticker-item"><span class="symbol">LLY</span><span class="up">+0.5%</span></div>
+        <div class="ticker-item"><span class="symbol">JPM</span><span class="down">-0.4%</span></div>
+    </div>
+</div>
+
+<!-- FEATURES -->
+<section class="features" id="features">
+    <div class="section-label">What You Get</div>
+    <h2 class="section-title">Everything you need to start each trading day.</h2>
+
+    <div class="features-grid">
+        <div class="feature-card">
+            <div class="feature-icon">📊</div>
+            <h3>Live Price Dashboard</h3>
+            <p>Real-time prices, daily change, volume, and 52-week highs and lows for your entire watchlist at a glance.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🧠</div>
+            <h3>AI Stock Summaries <span class="pro-badge">PRO</span></h3>
+            <p>Claude AI reads the fundamentals, price action, and news for each stock and writes a plain English morning briefing in seconds.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">📰</div>
+            <h3>News Sentiment Analysis <span class="pro-badge">PRO</span></h3>
+            <p>Every stock gets a sentiment score — Positive, Negative, or Mixed — based on the latest headlines, so you know the mood before you trade.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🎯</div>
+            <h3>Buy / Hold / Watch Signals <span class="pro-badge">PRO</span></h3>
+            <p>AI-generated signals with clear reasoning based on fundamentals, momentum, and news context. Not a black box — every signal is explained.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">📅</div>
+            <h3>Earnings Calendar</h3>
+            <p>Automatically tracks upcoming earnings for every stock in your watchlist so you're never caught off guard by a report.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🌍</div>
+            <h3>Macro & Industry Context <span class="pro-badge">PRO</span></h3>
+            <p>Broad market conditions, sector news, and macroeconomic factors explained in plain English — so you understand the environment your stocks are trading in.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">📚</div>
+            <h3>Personalized Trading Tips <span class="pro-badge">PRO</span></h3>
+            <p>Tips tailored to your experience level — whether you're brand new to investing or an advanced trader looking for edge.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">⚙️</div>
+            <h3>Custom Watchlist</h3>
+            <p>Add and remove any tickers you want. Up to 50 stocks per watchlist. Your dashboard, your stocks.</p>
+        </div>
+    </div>
+</section>
+
+<!-- PRICING -->
+<section class="pricing" id="pricing">
+    <div class="section-label">Simple Pricing</div>
+    <h2 class="section-title" style="max-width:100%">Free to start.<br>Donate to unlock AI.</h2>
+
+    <div class="pricing-cards">
+        <div class="pricing-card">
+            <div class="plan-name">Free</div>
+            <div class="plan-price">$0</div>
+            <div class="plan-desc">Everything you need to track your watchlist and stay on top of earnings.</div>
+            <ul class="plan-features">
+                <li><span class="check">✓</span> Live price dashboard</li>
+                <li><span class="check">✓</span> Fundamental indicators</li>
+                <li><span class="check">✓</span> Earnings calendar</li>
+                <li><span class="check">✓</span> Up to 50 tickers</li>
+                <li><span class="cross">–</span> AI summaries & signals</li>
+                <li><span class="cross">–</span> News sentiment analysis</li>
+                <li><span class="cross">–</span> Macro & industry context</li>
+                <li><span class="cross">–</span> Trading tips</li>
+            </ul>
+            <a href="/signup" class="btn btn-outline" style="width:100%;justify-content:center">Get Started Free</a>
+        </div>
+
+        <div class="pricing-card featured">
+            <div class="plan-name">Supporter</div>
+            <div class="plan-price">$5 <span>one-time</span></div>
+            <div class="plan-desc">Support the platform and unlock all AI-powered features permanently.</div>
+            <ul class="plan-features">
+                <li><span class="check">✓</span> Everything in Free</li>
+                <li><span class="check">✓</span> AI summaries & signals</li>
+                <li><span class="check">✓</span> News sentiment analysis</li>
+                <li><span class="check">✓</span> Macro & industry context</li>
+                <li><span class="check">✓</span> Personalized trading tips</li>
+                <li><span class="check">✓</span> Earnings previews</li>
+                <li><span class="check">✓</span> Support an indie developer</li>
+            </ul>
+            <a href="/signup" class="btn btn-primary" style="width:100%;justify-content:center">Get Started + Unlock AI</a>
+        </div>
+    </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+    <h2>Ready to trade smarter?</h2>
+    <p>Join Meridian Markets and start your morning with clarity.</p>
+    <a href="/signup" class="btn btn-primary" style="font-size:16px;padding:14px 36px">Create Your Free Account</a>
+</section>
+
+<footer>
+    <span>Merdian Markets &copy; 2026</span>
+    <span>Data via Yahoo Finance &bull; AI via Anthropic Claude &bull; Not financial advice</span>
+</footer>
+
+</body>
+</html>

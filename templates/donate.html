@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Support MarketPulse AI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --dark: #0a0f1e; --darker: #060b14; --accent: #00d4aa;
+            --text: #e8edf5; --muted: #6b7a99; --card: #111827; --border: #1e2d45;
+        }
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--dark);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(0,212,170,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,212,170,0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
+            pointer-events: none;
+        }
+        .card {
+            position: relative;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 48px;
+            width: 100%;
+            max-width: 480px;
+            text-align: center;
+        }
+        .back-link {
+            position: absolute;
+            top: 24px; left: 24px;
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .back-link:hover { color: var(--text); }
+        .icon { font-size: 48px; margin-bottom: 20px; }
+        h1 { font-family: 'DM Serif Display', serif; font-size: 32px; margin-bottom: 12px; letter-spacing: -0.5px; }
+        p { color: var(--muted); font-size: 15px; line-height: 1.7; margin-bottom: 32px; font-weight: 300; }
+        .amounts {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+        .amount-btn {
+            padding: 12px 24px;
+            background: var(--darker);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text);
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+            transition: all 0.2s;
+        }
+        .amount-btn:hover, .amount-btn.selected {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(0,212,170,0.05);
+        }
+        .custom-amount {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--darker);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0 16px;
+            margin-bottom: 24px;
+        }
+        .custom-amount span { color: var(--muted); font-size: 16px; }
+        .custom-amount input {
+            flex: 1;
+            background: none;
+            border: none;
+            padding: 12px 0;
+            color: var(--text);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 16px;
+            outline: none;
+        }
+        .custom-amount input::placeholder { color: var(--muted); }
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--accent);
+            color: var(--darker);
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+            transition: background 0.2s;
+        }
+        .btn:hover { background: #00bfa0; }
+        .perks {
+            text-align: left;
+            background: var(--darker);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+        .perks-title { font-size: 12px; font-weight: 700; color: var(--accent); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 12px; }
+        .perk {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            padding: 6px 0;
+            color: var(--text);
+        }
+        .perk-check { color: var(--accent); font-weight: 700; }
+        .disclaimer { font-size: 11px; color: var(--muted); margin-top: 16px; }
+        .alert { padding: 12px 16px; border-radius: 8px; font-size: 13px; margin-bottom: 20px; }
+        .alert-success { background: rgba(0,212,170,0.1); border: 1px solid rgba(0,212,170,0.3); color: var(--accent); }
+        .alert-error { background: rgba(255,92,122,0.1); border: 1px solid rgba(255,92,122,0.3); color: #ff5c7a; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <a href="/dashboard" class="back-link">← Back to Dashboard</a>
+
+    <div class="icon">💚</div>
+    <h1>Support MarketPulse AI</h1>
+    <p>A one-time donation unlocks all AI-powered features permanently — and helps keep the lights on for an indie developer.</p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+    {% endwith %}
+
+    <div class="perks">
+        <div class="perks-title">What you unlock</div>
+        <div class="perk"><span class="perk-check">✓</span> AI summaries for every stock</div>
+        <div class="perk"><span class="perk-check">✓</span> Buy / Hold / Watch signals</div>
+        <div class="perk"><span class="perk-check">✓</span> News sentiment analysis</div>
+        <div class="perk"><span class="perk-check">✓</span> Macro & industry context</div>
+        <div class="perk"><span class="perk-check">✓</span> Personalized trading tips</div>
+        <div class="perk"><span class="perk-check">✓</span> Earnings previews</div>
+    </div>
+
+    <form method="POST" action="/donate/checkout" id="donate-form">
+        <div class="amounts">
+            <button type="button" class="amount-btn selected" onclick="selectAmount(5, this)">$5</button>
+            <button type="button" class="amount-btn" onclick="selectAmount(10, this)">$10</button>
+            <button type="button" class="amount-btn" onclick="selectAmount(25, this)">$25</button>
+        </div>
+        <div class="custom-amount">
+            <span>$</span>
+            <input type="number" id="custom-input" placeholder="Custom amount" min="1" oninput="setCustom(this.value)">
+        </div>
+        <input type="hidden" name="amount" id="amount-input" value="5">
+        <button type="submit" class="btn">Donate with Card via Stripe</button>
+    </form>
+
+    <div class="disclaimer">Payments processed securely by Stripe. MarketPulse AI does not store your card details. Not financial advice.</div>
+</div>
+
+<script>
+    function selectAmount(amt, btn) {
+        document.querySelectorAll('.amount-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        document.getElementById('amount-input').value = amt;
+        document.getElementById('custom-input').value = '';
+    }
+    function setCustom(val) {
+        document.querySelectorAll('.amount-btn').forEach(b => b.classList.remove('selected'));
+        document.getElementById('amount-input').value = val || 5;
+    }
+</script>
+</body>
+</html>

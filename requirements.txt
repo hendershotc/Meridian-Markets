@@ -1,0 +1,9 @@
+flask
+flask-sqlalchemy
+flask-login
+werkzeug
+yfinance
+anthropic
+stripe
+python-dotenv
+gunicorn

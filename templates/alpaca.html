@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Alpaca Live Paper Trading — Meridian Markets</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --gold:    #c9a84c;
+      --gold-lt: #e8c96e;
+      --bg:      #0a0a0f;
+      --card:    #12121a;
+      --card2:   #1a1a26;
+      --border:  #2a2a3a;
+      --text:    #e8e8f0;
+      --muted:   #6a6a8a;
+      --green:   #2ecc71;
+      --red:     #e74c3c;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+
+    /* NAV */
+    nav { display: flex; align-items: center; justify-content: space-between; padding: 0 2rem; height: 56px; background: var(--card); border-bottom: 1px solid var(--border); }
+    .nav-left { display: flex; gap: 0.25rem; }
+    .nav-tab { padding: 0.4rem 1rem; border-radius: 6px; color: var(--muted); text-decoration: none; font-size: 0.9rem; transition: all .2s; }
+    .nav-tab:hover, .nav-tab.active { background: rgba(201,168,76,.12); color: var(--gold); }
+    .nav-right a { color: var(--muted); font-size: 0.85rem; text-decoration: none; }
+    .nav-right a:hover { color: var(--gold); }
+    .badge-live { background: rgba(46,204,113,.15); color: var(--green); border: 1px solid rgba(46,204,113,.3); border-radius: 4px; padding: 2px 8px; font-size: 0.7rem; font-weight: 600; letter-spacing: .5px; }
+    .badge-paper { background: rgba(201,168,76,.15); color: var(--gold); border: 1px solid rgba(201,168,76,.3); border-radius: 4px; padding: 2px 8px; font-size: 0.7rem; font-weight: 600; }
+
+    /* LAYOUT */
+    .page { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+    /* CONNECTION BANNER */
+    .conn-banner { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.5rem; border-radius: 10px; margin-bottom: 2rem; border: 1px solid; }
+    .conn-banner.connected { background: rgba(46,204,113,.08); border-color: rgba(46,204,113,.25); }
+    .conn-banner.disconnected { background: rgba(231,76,60,.08); border-color: rgba(231,76,60,.25); }
+    .conn-info { display: flex; align-items: center; gap: 1rem; }
+    .conn-dot { width: 10px; height: 10px; border-radius: 50%; animation: pulse 2s infinite; }
+    .conn-dot.green { background: var(--green); box-shadow: 0 0 8px var(--green); }
+    .conn-dot.red   { background: var(--red);   box-shadow: 0 0 8px var(--red); }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+    .conn-label { font-weight: 600; }
+    .conn-sub   { font-size: 0.85rem; color: var(--muted); }
+
+    /* SETUP GUIDE */
+    .setup-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 2rem; margin-bottom: 2rem; }
+    .setup-card h3 { color: var(--gold); margin-bottom: 1.5rem; font-size: 1.1rem; }
+    .steps { display: grid; gap: 1rem; }
+    .step { display: flex; gap: 1rem; align-items: flex-start; }
+    .step-num { width: 28px; height: 28px; border-radius: 50%; background: rgba(201,168,76,.15); border: 1px solid var(--gold); color: var(--gold); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700; flex-shrink: 0; }
+    .step-text { font-size: 0.9rem; line-height: 1.5; color: var(--text); }
+    .step-text code { background: var(--card2); padding: 1px 6px; border-radius: 4px; font-family: monospace; color: var(--gold-lt); font-size: 0.85rem; }
+    .step-text a { color: var(--gold); }
+
+    /* STATS GRID */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem; }
+    .stat-label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 0.5rem; }
+    .stat-value { font-size: 1.5rem; font-weight: 700; color: var(--text); }
+    .stat-value.gold  { color: var(--gold); }
+    .stat-value.green { color: var(--green); }
+    .stat-value.red   { color: var(--red); }
+    .stat-sub { font-size: 0.75rem; color: var(--muted); margin-top: 0.25rem; }
+
+    /* VERSUS BANNER */
+    .versus { display: grid; grid-template-columns: 1fr auto 1fr; gap: 1rem; align-items: center; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; }
+    .vs-side { text-align: center; }
+    .vs-label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem; }
+    .vs-return { font-size: 2rem; font-weight: 800; }
+    .vs-name { font-size: 0.85rem; color: var(--muted); margin-top: 0.25rem; }
+    .vs-divider { font-size: 1.2rem; color: var(--muted); font-weight: 700; }
+    .vs-alpha { text-align: center; }
+    .alpha-badge { display: inline-block; padding: 0.3rem 1rem; border-radius: 20px; font-weight: 700; font-size: 0.9rem; margin-top: 0.5rem; }
+    .alpha-pos { background: rgba(46,204,113,.15); color: var(--green); border: 1px solid rgba(46,204,113,.3); }
+    .alpha-neg { background: rgba(231,76,60,.15); color: var(--red); border: 1px solid rgba(231,76,60,.3); }
+
+    /* GRID 2-COL */
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem; }
+    @media (max-width: 768px) { .grid2 { grid-template-columns: 1fr; } }
+
+    /* CARDS */
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; }
+    .card-title { font-size: 0.85rem; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 1rem; }
+    .chart-wrap { position: relative; height: 220px; }
+
+    /* TABLE */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    th { text-align: left; padding: 0.75rem 1rem; color: var(--muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: .5px; border-bottom: 1px solid var(--border); }
+    td { padding: 0.75rem 1rem; border-bottom: 1px solid rgba(255,255,255,.04); }
+    tr:hover td { background: rgba(255,255,255,.02); }
+    .pill { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+    .pill-buy   { background: rgba(46,204,113,.12); color: var(--green); }
+    .pill-sell  { background: rgba(231,76,60,.12); color: var(--red); }
+    .pill-filled { background: rgba(201,168,76,.12); color: var(--gold); }
+    .pill-pending { background: rgba(106,106,138,.12); color: var(--muted); }
+    .pnl-pos { color: var(--green); font-weight: 600; }
+    .pnl-neg { color: var(--red); font-weight: 600; }
+
+    /* BUTTONS */
+    .btn { padding: 0.6rem 1.4rem; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; border: none; transition: all .2s; }
+    .btn-gold    { background: var(--gold); color: #0a0a0f; }
+    .btn-gold:hover { background: var(--gold-lt); transform: translateY(-1px); }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+    .btn-red    { background: rgba(231,76,60,.15); border: 1px solid rgba(231,76,60,.3); color: var(--red); }
+    .btn-red:hover { background: rgba(231,76,60,.25); }
+    .btn:disabled { opacity: .5; cursor: not-allowed; transform: none !important; }
+    .btn-row { display: flex; gap: 0.75rem; margin-bottom: 1.5rem; flex-wrap: wrap; align-items: center; }
+
+    /* DIFFERENCE BANNER */
+    .diff-card { background: linear-gradient(135deg, rgba(201,168,76,.06), rgba(201,168,76,.02)); border: 1px solid rgba(201,168,76,.2); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; }
+    .diff-card h3 { color: var(--gold); margin-bottom: 1rem; font-size: 1rem; }
+    .diff-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 600px) { .diff-grid { grid-template-columns: 1fr; } }
+    .diff-col h4 { font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 0.75rem; }
+    .diff-item { display: flex; align-items: flex-start; gap: 0.5rem; font-size: 0.85rem; margin-bottom: 0.5rem; line-height: 1.4; }
+    .diff-icon { flex-shrink: 0; margin-top: 1px; }
+
+    /* AI REASONING */
+    .ai-bubble { background: rgba(201,168,76,.06); border: 1px solid rgba(201,168,76,.15); border-radius: 8px; padding: 1rem; font-size: 0.82rem; line-height: 1.6; color: var(--text); margin-top: 0.5rem; max-height: 120px; overflow-y: auto; }
+
+    /* SPINNER */
+    .spin { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.2); border-top-color: var(--gold); border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle; margin-right: 6px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .empty-state { text-align: center; padding: 2rem; color: var(--muted); }
+    .section-title { font-size: 1rem; font-weight: 600; color: var(--text); margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem; }
+    #toast { position: fixed; bottom: 2rem; right: 2rem; background: var(--card2); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.5rem; font-size: 0.9rem; z-index: 999; opacity: 0; transition: opacity .3s; pointer-events: none; max-width: 320px; }
+    #toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-left">
+    <a href="/alpaca" class="nav-tab active">⚡ Alpaca Live</a>
+    <a href="/simulator" class="nav-tab">🤖 Simulator</a>
+    <a href="/simulator/performance" class="nav-tab">📊 Performance</a>
+  </div>
+  <div class="nav-right" style="display:flex;align-items:center;gap:1rem;">
+    <span id="conn-badge" class="badge-paper">Checking...</span>
+    <a href="/markets">← Markets</a>
+  </div>
+</nav>
+
+<div class="page">
+
+  <!-- CONNECTION BANNER -->
+  <div id="conn-banner" class="conn-banner disconnected" style="display:none;">
+    <div class="conn-info">
+      <div id="conn-dot" class="conn-dot red"></div>
+      <div>
+        <div class="conn-label" id="conn-label">Not connected</div>
+        <div class="conn-sub" id="conn-sub">Add your Alpaca API keys to .env to get started</div>
+      </div>
+    </div>
+    <button class="btn btn-outline" onclick="loadStatus()">Retry</button>
+  </div>
+
+  <!-- SETUP GUIDE (shown when disconnected) -->
+  <div id="setup-section" class="setup-card">
+    <h3>🚀 Get Started with Alpaca Paper Trading</h3>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text">
+          Sign up for a free account at <a href="https://alpaca.markets" target="_blank">alpaca.markets</a> —
+          no credit card needed for paper trading
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text">
+          In the top-left of your Alpaca dashboard, switch to <strong>Paper Trading</strong> account,
+          then go to <strong>API Keys</strong> and generate a key pair
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-text">
+          Install the SDK: <code>pip install alpaca-py</code>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-text">
+          Add to your <code>.env</code> file:<br>
+          <code>ALPACA_API_KEY=your_paper_api_key</code><br>
+          <code>ALPACA_SECRET_KEY=your_paper_secret_key</code><br>
+          <code>ALPACA_PAPER=true</code>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-text">Restart the app and come back here — the bot will connect automatically</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIVE DASHBOARD (shown when connected) -->
+  <div id="live-section" style="display:none;">
+
+    <!-- WHAT'S DIFFERENT BANNER -->
+    <div class="diff-card">
+      <h3>⚡ How Alpaca is different from the Simulator</h3>
+      <div class="diff-grid">
+        <div class="diff-col">
+          <h4>✅ Upgrades you get here</h4>
+          <div class="diff-item"><span class="diff-icon">📡</span> Real-time prices — no 15-min delay</div>
+          <div class="diff-item"><span class="diff-icon">🛡️</span> Stop losses fire at the broker instantly — even when your app is offline</div>
+          <div class="diff-item"><span class="diff-icon">💹</span> Realistic fills — simulates slippage and partial fills</div>
+          <div class="diff-item"><span class="diff-icon">📈</span> Equity curve pulled from Alpaca's own tracking</div>
+          <div class="diff-item"><span class="diff-icon">🔄</span> One line of code to go from paper → real money</div>
+        </div>
+        <div class="diff-col">
+          <h4>⚠️ Still the same strategy</h4>
+          <div class="diff-item"><span class="diff-icon">🧠</span> Same MACD + RSI + MA signals</div>
+          <div class="diff-item"><span class="diff-icon">💰</span> Same position sizing (10% per position)</div>
+          <div class="diff-item"><span class="diff-icon">🛑</span> Same 5% stop loss / 15% take profit</div>
+          <div class="diff-item"><span class="diff-icon">📋</span> Same 35-stock universe</div>
+          <div class="diff-item"><span class="diff-icon">🤖</span> Same AI reasoning per trade</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VERSUS BANNER -->
+    <div class="versus" id="versus-banner" style="display:none;">
+      <div class="vs-side">
+        <div class="vs-label">Alpaca Bot</div>
+        <div class="vs-return" id="vs-bot-return" style="color:var(--gold)">—</div>
+        <div class="vs-name">Since account open</div>
+      </div>
+      <div class="vs-divider">vs</div>
+      <div class="vs-side">
+        <div class="vs-label">S&P 500</div>
+        <div class="vs-return" id="vs-sp500-return" style="color:var(--muted)">—</div>
+        <div class="vs-name">Same period</div>
+      </div>
+    </div>
+
+    <!-- STATS GRID -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Portfolio Value</div>
+        <div class="stat-value gold" id="stat-value">—</div>
+        <div class="stat-sub">Alpaca paper account</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Return</div>
+        <div class="stat-value" id="stat-return">—</div>
+        <div class="stat-sub" id="stat-return-dollar">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Cash Available</div>
+        <div class="stat-value" id="stat-cash">—</div>
+        <div class="stat-sub" id="stat-bp">buying power</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Open Positions</div>
+        <div class="stat-value" id="stat-positions">—</div>
+        <div class="stat-sub">of 5 max</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Invested</div>
+        <div class="stat-value" id="stat-invested">—</div>
+        <div class="stat-sub">in open positions</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Alpha vs S&P</div>
+        <div class="stat-value" id="stat-alpha">—</div>
+        <div class="stat-sub" id="stat-beat">—</div>
+      </div>
+    </div>
+
+    <!-- ACTIONS -->
+    <div class="btn-row">
+      <button class="btn btn-gold" id="run-btn" onclick="runCycle()">▶ Run Bot Cycle Now</button>
+      <button class="btn btn-outline" onclick="loadPositions(); loadOrders()">↻ Refresh</button>
+      <span id="run-status" style="font-size:0.85rem;color:var(--muted);"></span>
+    </div>
+
+    <!-- CHARTS -->
+    <div class="grid2" style="margin-bottom:2rem;">
+      <div class="card">
+        <div class="card-title">Equity Curve</div>
+        <div class="chart-wrap"><canvas id="equityChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Unrealized P&L by Position</div>
+        <div class="chart-wrap"><canvas id="pnlChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- POSITIONS TABLE -->
+    <div class="card" style="margin-bottom:1.5rem;">
+      <div class="section-title">📋 Open Positions <span id="pos-count" style="color:var(--muted);font-size:0.85rem;font-weight:400;"></span></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Ticker</th>
+              <th>Shares</th>
+              <th>Entry</th>
+              <th>Current</th>
+              <th>Market Value</th>
+              <th>Unrealized P&L</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="positions-body">
+            <tr><td colspan="7" class="empty-state">Loading positions...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ORDERS TABLE -->
+    <div class="card">
+      <div class="section-title">🗒️ Recent Orders <span style="color:var(--muted);font-size:0.8rem;font-weight:400;">(last 30)</span></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Ticker</th>
+              <th>Side</th>
+              <th>Qty / Notional</th>
+              <th>Type</th>
+              <th>Status</th>
+              <th>Fill Price</th>
+              <th>Submitted</th>
+            </tr>
+          </thead>
+          <tbody id="orders-body">
+            <tr><td colspan="7" class="empty-state">Loading orders...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /live-section -->
+</div><!-- /page -->
+
+<div id="toast"></div>
+
+<script>
+let equityChart = null;
+let pnlChart    = null;
+
+// ── INIT ──
+window.addEventListener('DOMContentLoaded', () => {
+  loadStatus();
+});
+
+// ── STATUS CHECK ──
+async function loadStatus() {
+  try {
+    const r = await fetch('/api/alpaca/status');
+    const d = await r.json();
+
+    const banner    = document.getElementById('conn-banner');
+    const setup     = document.getElementById('setup-section');
+    const live      = document.getElementById('live-section');
+    const badge     = document.getElementById('conn-badge');
+    const dot       = document.getElementById('conn-dot');
+    const label     = document.getElementById('conn-label');
+    const sub       = document.getElementById('conn-sub');
+
+    banner.style.display = 'flex';
+
+    if (d.connected) {
+      banner.className = 'conn-banner connected';
+      dot.className    = 'conn-dot green';
+      label.textContent = 'Connected to Alpaca Paper Trading';
+      sub.textContent   = d.message;
+      badge.textContent = '● PAPER LIVE';
+      badge.className   = 'badge-live';
+      setup.style.display = 'none';
+      live.style.display  = 'block';
+      loadStats();
+      loadPositions();
+      loadOrders();
+    } else {
+      banner.className  = 'conn-banner disconnected';
+      dot.className     = 'conn-dot red';
+      label.textContent = 'Not connected to Alpaca';
+      sub.textContent   = d.error || 'Check your API keys in .env';
+      badge.textContent = 'Disconnected';
+      badge.className   = 'badge-paper';
+      setup.style.display = 'block';
+      live.style.display  = 'none';
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+// ── STATS ──
+async function loadStats() {
+  try {
+    const r = await fetch('/api/alpaca/stats');
+    const d = await r.json();
+    if (d.error) return;
+
+    const retPct = d.total_return;
+    const retPos = retPct >= 0;
+
+    document.getElementById('stat-value').textContent    = '$' + d.current_value.toLocaleString();
+    document.getElementById('stat-return').textContent   = (retPos ? '+' : '') + retPct + '%';
+    document.getElementById('stat-return').className     = 'stat-value ' + (retPos ? 'green' : 'red');
+    document.getElementById('stat-return-dollar').textContent = (retPos ? '+$' : '-$') + Math.abs(d['total_return_$']).toLocaleString();
+    document.getElementById('stat-cash').textContent     = '$' + d.cash.toLocaleString();
+    document.getElementById('stat-bp').textContent       = '$' + d.buying_power.toLocaleString() + ' buying power';
+    document.getElementById('stat-positions').textContent = d.open_positions;
+    document.getElementById('stat-invested').textContent  = '$' + d.positions_value.toLocaleString();
+    document.getElementById('stat-alpha').textContent     = (d.alpha >= 0 ? '+' : '') + d.alpha + '%';
+    document.getElementById('stat-alpha').className       = 'stat-value ' + (d.alpha >= 0 ? 'green' : 'red');
+    document.getElementById('stat-beat').textContent      = d.beat_market ? '✅ Beating S&P 500' : '⚠️ Lagging S&P 500';
+
+    // Versus banner
+    if (d.sp500_return !== undefined) {
+      document.getElementById('versus-banner').style.display = 'grid';
+      const botEl  = document.getElementById('vs-bot-return');
+      const spEl   = document.getElementById('vs-sp500-return');
+      botEl.textContent  = (retPos ? '+' : '') + retPct + '%';
+      botEl.style.color  = retPos ? 'var(--green)' : 'var(--red)';
+      spEl.textContent   = (d.sp500_return >= 0 ? '+' : '') + d.sp500_return + '%';
+    }
+
+    // Equity chart
+    if (d.equity_curve && d.equity_curve.length > 1) {
+      drawEquityChart(d.equity_curve);
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+// ── POSITIONS ──
+async function loadPositions() {
+  const tbody = document.getElementById('positions-body');
+  try {
+    const r = await fetch('/api/alpaca/positions');
+    const d = await r.json();
+    if (d.error) { tbody.innerHTML = `<tr><td colspan="7" class="empty-state">${d.error}</td></tr>`; return; }
+
+    const positions = d.positions || [];
+    document.getElementById('pos-count').textContent = `(${positions.length} open)`;
+
+    if (positions.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No open positions</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = positions.map(p => {
+      const pos = p.unrealized_pnl >= 0;
+      return `<tr>
+        <td><strong>${p.ticker}</strong></td>
+        <td>${p.qty.toFixed(4)}</td>
+        <td>$${p.entry_price.toFixed(2)}</td>
+        <td>$${p.current_price.toFixed(2)}</td>
+        <td>$${p.market_value.toLocaleString()}</td>
+        <td class="${pos ? 'pnl-pos' : 'pnl-neg'}">
+          ${pos ? '+' : ''}$${p.unrealized_pnl.toFixed(2)}
+          (${pos ? '+' : ''}${p.unrealized_pnl_pct.toFixed(2)}%)
+        </td>
+        <td>
+          <button class="btn btn-red" style="padding:.3rem .75rem;font-size:.8rem;"
+            onclick="closePosition('${p.ticker}')">Close</button>
+        </td>
+      </tr>`;
+    }).join('');
+
+    // P&L bar chart
+    drawPnlChart(positions);
+
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="7" class="empty-state">Error loading positions</td></tr>`;
+  }
+}
+
+// ── ORDERS ──
+async function loadOrders() {
+  const tbody = document.getElementById('orders-body');
+  try {
+    const r = await fetch('/api/alpaca/orders');
+    const d = await r.json();
+    if (d.error) { tbody.innerHTML = `<tr><td colspan="7" class="empty-state">${d.error}</td></tr>`; return; }
+
+    const orders = d.orders || [];
+    if (orders.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No orders yet</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = orders.map(o => {
+      const isBuy  = o.side.includes('buy');
+      const status = o.status.replace('OrderStatus.', '');
+      const statusClass = status === 'filled' ? 'pill-filled' :
+                          status === 'new' || status === 'partially_filled' ? 'pill-pending' : 'pill-pending';
+      const submitted = o.submitted_at ? o.submitted_at.substring(0, 16).replace('T', ' ') : '—';
+      return `<tr>
+        <td><strong>${o.ticker}</strong></td>
+        <td><span class="pill ${isBuy ? 'pill-buy' : 'pill-sell'}">${isBuy ? 'BUY' : 'SELL'}</span></td>
+        <td>${o.qty}</td>
+        <td>${o.type.replace('OrderType.', '')}</td>
+        <td><span class="pill ${statusClass}">${status}</span></td>
+        <td>${o.filled_price ? '$' + o.filled_price : '—'}</td>
+        <td style="color:var(--muted);font-size:0.8rem;">${submitted}</td>
+      </tr>`;
+    }).join('');
+
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="7" class="empty-state">Error loading orders</td></tr>`;
+  }
+}
+
+// ── RUN CYCLE ──
+async function runCycle() {
+  const btn    = document.getElementById('run-btn');
+  const status = document.getElementById('run-status');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span> Running...';
+  status.textContent = '';
+
+  try {
+    const r = await fetch('/api/alpaca/run', { method: 'POST' });
+    const d = await r.json();
+    if (d.success) {
+      const msg = `${d.message} — ${d.buys} buy${d.buys !== 1 ? 's' : ''}, ${d.sells} sell${d.sells !== 1 ? 's' : ''}`;
+      status.textContent = msg;
+      showToast('✅ ' + msg, 'green');
+      setTimeout(() => { loadStats(); loadPositions(); loadOrders(); }, 1500);
+    } else {
+      status.textContent = 'Error: ' + d.error;
+      showToast('❌ ' + d.error, 'red');
+    }
+  } catch (e) {
+    status.textContent = 'Network error';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '▶ Run Bot Cycle Now';
+  }
+}
+
+// ── CLOSE POSITION ──
+async function closePosition(ticker) {
+  if (!confirm(`Close entire ${ticker} position?`)) return;
+  try {
+    const r = await fetch(`/api/alpaca/close/${ticker}`, { method: 'POST' });
+    const d = await r.json();
+    if (d.success) {
+      showToast(`✅ ${ticker} position closed`, 'green');
+      setTimeout(() => { loadStats(); loadPositions(); loadOrders(); }, 1500);
+    } else {
+      showToast('❌ ' + d.error, 'red');
+    }
+  } catch (e) {
+    showToast('❌ Network error', 'red');
+  }
+}
+
+// ── CHARTS ──
+function drawEquityChart(curve) {
+  const ctx = document.getElementById('equityChart').getContext('2d');
+  if (equityChart) equityChart.destroy();
+  equityChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: curve.map(p => p.date),
+      datasets: [{
+        label: 'Portfolio Value',
+        data: curve.map(p => p.value),
+        borderColor: '#c9a84c',
+        backgroundColor: 'rgba(201,168,76,.08)',
+        fill: true,
+        tension: 0.3,
+        pointRadius: 2,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#6a6a8a', maxTicksLimit: 6 }, grid: { color: 'rgba(255,255,255,.04)' } },
+        y: { ticks: { color: '#6a6a8a', callback: v => '$' + v.toLocaleString() }, grid: { color: 'rgba(255,255,255,.04)' } }
+      }
+    }
+  });
+}
+
+function drawPnlChart(positions) {
+  const ctx = document.getElementById('pnlChart').getContext('2d');
+  if (pnlChart) pnlChart.destroy();
+  if (!positions.length) return;
+  pnlChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: positions.map(p => p.ticker),
+      datasets: [{
+        label: 'Unrealized P&L ($)',
+        data: positions.map(p => p.unrealized_pnl),
+        backgroundColor: positions.map(p => p.unrealized_pnl >= 0 ? 'rgba(46,204,113,.5)' : 'rgba(231,76,60,.5)'),
+        borderColor: positions.map(p => p.unrealized_pnl >= 0 ? '#2ecc71' : '#e74c3c'),
+        borderWidth: 1,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#6a6a8a' }, grid: { display: false } },
+        y: { ticks: { color: '#6a6a8a', callback: v => '$' + v }, grid: { color: 'rgba(255,255,255,.04)' } }
+      }
+    }
+  });
+}
+
+// ── TOAST ──
+function showToast(msg, type = 'gold') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.borderColor = type === 'green' ? 'rgba(46,204,113,.4)' : type === 'red' ? 'rgba(231,76,60,.4)' : 'var(--border)';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+</script>
+</body>
+</html>

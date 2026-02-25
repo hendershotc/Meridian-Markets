@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Trading Simulator — Meridian Markets</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --void:#04060f; --deep:#070b18; --surface:#0c1220; --elevated:#111827;
+            --border:#1a2540; --border2:#243050;
+            --gold:#c9a84c; --gold2:#e8c97a;
+            --cyan:#00e5ff; --green:#00ff88; --red:#ff3b5c; --orange:#ff9640;
+            --text:#e2e8f8; --muted:#4a5a7a; --muted2:#6a7a9a;
+            --mono:'JetBrains Mono',monospace; --display:'Syne',sans-serif;
+        }
+        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+        body{font-family:var(--display);background:var(--void);color:var(--text);min-height:100vh;}
+        body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,229,255,0.008) 2px,rgba(0,229,255,0.008) 4px);pointer-events:none;z-index:1;}
+
+        /* NAV */
+        nav{position:sticky;top:0;z-index:100;display:flex;justify-content:space-between;align-items:center;padding:0 48px;height:64px;background:rgba(4,6,15,0.95);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);}
+        .nav-logo{font-family:var(--display);font-size:16px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--text);text-decoration:none;display:flex;align-items:center;gap:10px;}
+        .nav-logo-mark{width:28px;height:28px;border:1.5px solid var(--gold);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--gold);font-weight:700;}
+        .nav-logo span{color:var(--gold);}
+        .nav-links{display:flex;gap:4px;}
+        .nav-tab{background:none;border:none;padding:8px 16px;font-family:var(--display);font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted2);cursor:pointer;border-radius:6px;text-decoration:none;transition:all 0.2s;}
+        .nav-tab:hover,.nav-tab.active{color:var(--text);background:rgba(255,255,255,0.05);}
+        .nav-right{display:flex;gap:10px;align-items:center;}
+        .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 20px;border-radius:6px;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;border:none;font-family:var(--display);transition:all 0.25s;text-decoration:none;}
+        .btn-gold{background:linear-gradient(135deg,var(--gold),var(--gold2));color:var(--void);}
+        .btn-ghost{background:transparent;color:var(--muted2);border:1px solid var(--border2);}
+        .btn-ghost:hover{color:var(--text);}
+        .btn-danger{background:rgba(255,59,92,0.15);color:var(--red);border:1px solid rgba(255,59,92,0.3);}
+
+        /* PAGE */
+        .page{position:relative;z-index:10;max-width:1400px;margin:0 auto;padding:40px 48px 80px;}
+
+        /* HERO */
+        .sim-hero{margin-bottom:40px;}
+        .sim-eyebrow{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:var(--gold);margin-bottom:12px;}
+        .sim-title{font-size:clamp(32px,4vw,52px);font-weight:800;letter-spacing:-1px;margin-bottom:16px;}
+        .sim-subtitle{font-size:16px;color:var(--muted2);max-width:600px;line-height:1.6;}
+
+        /* STATS GRID */
+        .stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:32px;}
+        .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;}
+        .stat-label{font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+        .stat-value{font-family:var(--mono);font-size:22px;font-weight:500;}
+        .stat-sub{font-family:var(--mono);font-size:11px;color:var(--muted2);margin-top:4px;}
+        .up{color:var(--green);}
+        .down{color:var(--red);}
+        .gold{color:var(--gold);}
+
+        /* MAIN GRID */
+        .main-grid{display:grid;grid-template-columns:1fr 380px;gap:24px;}
+
+        /* CARD */
+        .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+        .card-header{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+        .card-title{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);}
+        .card-body{padding:24px;}
+
+        /* POSITIONS TABLE */
+        .pos-table{width:100%;border-collapse:collapse;}
+        .pos-table th{font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--muted);padding:10px 12px;border-bottom:1px solid var(--border);text-align:left;}
+        .pos-table td{padding:14px 12px;border-bottom:1px solid rgba(255,255,255,0.03);font-size:13px;}
+        .pos-table tr:last-child td{border-bottom:none;}
+        .pos-ticker{font-family:var(--mono);font-weight:600;font-size:14px;}
+        .signal-badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:4px;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:1px;}
+        .badge-buy{background:rgba(0,255,136,0.1);color:var(--green);border:1px solid rgba(0,255,136,0.2);}
+        .badge-sell{background:rgba(255,59,92,0.1);color:var(--red);border:1px solid rgba(255,59,92,0.2);}
+        .badge-hold{background:rgba(201,168,76,0.1);color:var(--gold);border:1px solid rgba(201,168,76,0.2);}
+
+        /* ACTIVITY FEED */
+        .activity-feed{max-height:420px;overflow-y:auto;}
+        .activity-item{padding:16px;border-bottom:1px solid rgba(255,255,255,0.03);}
+        .activity-item:last-child{border-bottom:none;}
+        .activity-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+        .activity-action{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:1px;}
+        .activity-time{font-family:var(--mono);font-size:9px;color:var(--muted);}
+        .activity-ai{font-size:12px;color:var(--muted2);line-height:1.6;margin-top:6px;}
+
+        /* EMPTY STATE */
+        .empty-state{text-align:center;padding:60px 20px;}
+        .empty-icon{font-size:48px;margin-bottom:16px;opacity:0.4;}
+        .empty-title{font-size:20px;font-weight:700;margin-bottom:8px;}
+        .empty-sub{color:var(--muted2);font-size:14px;line-height:1.6;max-width:440px;margin:0 auto 24px;}
+
+        /* START PANEL */
+        .start-panel{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:48px;max-width:720px;margin:0 auto;}
+        .start-title{font-size:28px;font-weight:800;margin-bottom:12px;}
+        .start-sub{color:var(--muted2);font-size:15px;line-height:1.7;margin-bottom:32px;}
+        .strategy-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:32px;}
+        .strategy-item{background:var(--elevated);border:1px solid var(--border);border-radius:10px;padding:16px;}
+        .strategy-label{font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:6px;}
+        .strategy-value{font-size:13px;color:var(--text);line-height:1.5;}
+
+        /* CHART */
+        .chart-wrap{position:relative;height:240px;}
+
+        /* TRADE HISTORY */
+        .trade-row{display:grid;grid-template-columns:80px 1fr 80px 80px 120px;gap:8px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.03);align-items:start;}
+        .trade-row:last-child{border-bottom:none;}
+        .trade-ticker{font-family:var(--mono);font-weight:600;}
+        .trade-reason{font-size:11px;color:var(--muted2);}
+        .trade-pnl{font-family:var(--mono);font-size:13px;font-weight:600;text-align:right;}
+        .trade-date{font-family:var(--mono);font-size:10px;color:var(--muted);text-align:right;}
+
+        /* RUN BOT BUTTON */
+        .run-section{background:linear-gradient(135deg,rgba(201,168,76,0.05),rgba(0,229,255,0.03));border:1px solid rgba(201,168,76,0.2);border-radius:14px;padding:24px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:center;}
+        .run-info{}
+        .run-title{font-size:16px;font-weight:700;margin-bottom:4px;}
+        .run-sub{font-size:13px;color:var(--muted2);}
+
+        /* SCROLLBAR */
+        ::-webkit-scrollbar{width:4px;}
+        ::-webkit-scrollbar-track{background:var(--void);}
+        ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+
+        /* LOADING */
+        .loading-overlay{display:none;position:fixed;inset:0;background:rgba(4,6,15,0.8);z-index:1000;align-items:center;justify-content:center;flex-direction:column;gap:16px;}
+        .loading-overlay.active{display:flex;}
+        .loading-spinner{width:40px;height:40px;border:2px solid var(--border2);border-top-color:var(--gold);border-radius:50%;animation:spin 0.8s linear infinite;}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        .loading-text{font-family:var(--mono);font-size:13px;color:var(--muted2);}
+    </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+    <a href="/" class="nav-logo">
+        <div class="nav-logo-mark">M</div>
+        Meridian <span>Markets</span>
+    </a>
+    <div class="nav-links">
+        <a href="/simulator" class="nav-tab active">Simulator</a>
+        <a href="/simulator/performance" class="nav-tab">Performance</a>
+        <a href="/alpaca" class="nav-tab">Alpaca</a>
+        <a href="/markets" class="nav-tab" style="margin-left:16px;border-left:1px solid var(--border);padding-left:20px">← Markets</a>
+    </div>
+    <div class="nav-right">
+        {% if current_user.is_authenticated %}
+        <span style="font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:1px;color:var(--muted2)">{{ current_user.name.upper() }}</span>
+        <a href="/logout" class="btn btn-ghost">Log Out</a>
+        {% endif %}
+    </div>
+</nav>
+
+<!-- LOADING OVERLAY -->
+<div class="loading-overlay" id="loading-overlay">
+    <div class="loading-spinner"></div>
+    <div class="loading-text" id="loading-text">Running bot cycle...</div>
+</div>
+
+<div class="page">
+
+    <div class="sim-hero">
+        <div class="sim-eyebrow">◆ AI Paper Trading</div>
+        <div class="sim-title">Trading Simulator</div>
+        <div class="sim-subtitle">Run an AI-powered trading bot on a $100,000 paper portfolio. See how algorithmic strategies perform over your semester vs. the S&P 500.</div>
+    </div>
+
+    {% if not has_portfolio %}
+    <!-- ── START STATE ── -->
+    <div class="start-panel">
+        <div class="start-title">Start Your AI Trading Portfolio</div>
+        <div class="start-sub">The bot uses a multi-signal strategy combining moving averages, MACD momentum, RSI conditions, and volume confirmation. Each trade comes with AI reasoning explaining exactly why it was made — perfect for learning how algorithmic trading works.</div>
+
+        <div class="strategy-grid">
+            <div class="strategy-item">
+                <div class="strategy-label">Starting Capital</div>
+                <div class="strategy-value">$100,000 paper money</div>
+            </div>
+            <div class="strategy-item">
+                <div class="strategy-label">Max Positions</div>
+                <div class="strategy-value">5 simultaneous holdings</div>
+            </div>
+            <div class="strategy-item">
+                <div class="strategy-label">Position Sizing</div>
+                <div class="strategy-value">Max 10% per trade</div>
+            </div>
+            <div class="strategy-item">
+                <div class="strategy-label">Risk Management</div>
+                <div class="strategy-value">5% stop loss / 15% target</div>
+            </div>
+            <div class="strategy-item">
+                <div class="strategy-label">Entry Signals</div>
+                <div class="strategy-value">MACD + RSI + MA + Volume</div>
+            </div>
+            <div class="strategy-item">
+                <div class="strategy-label">Benchmark</div>
+                <div class="strategy-value">vs. S&P 500 (SPY)</div>
+            </div>
+        </div>
+
+        <button class="btn btn-gold" onclick="startPortfolio()" style="font-size:13px;padding:14px 32px">◆ Launch AI Portfolio</button>
+    </div>
+
+    {% else %}
+    <!-- ── ACTIVE PORTFOLIO ── -->
+
+    <!-- Stats -->
+    <div class="stats-grid" id="stats-grid">
+        <div class="stat-card">
+            <div class="stat-label">Portfolio Value</div>
+            <div class="stat-value" id="stat-value">${{ "{:,.0f}".format(stats.current_value) }}</div>
+            <div class="stat-sub {{ 'up' if stats.total_return >= 0 else 'down' }}">{{ '+' if stats.total_return >= 0 else '' }}{{ stats.total_return }}% total return</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">vs S&P 500</div>
+            <div class="stat-value {{ 'up' if stats.alpha >= 0 else 'down' }}">{{ '+' if stats.alpha >= 0 else '' }}{{ stats.alpha }}%</div>
+            <div class="stat-sub">S&P: {{ '+' if stats.sp500_return >= 0 else '' }}{{ stats.sp500_return }}% | {{ 'Beating' if stats.beat_market else 'Behind' }} market</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Cash Available</div>
+            <div class="stat-value gold">${{ "{:,.0f}".format(stats.cash) }}</div>
+            <div class="stat-sub">{{ stats.open_positions }} positions open</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Win Rate</div>
+            <div class="stat-value">{{ stats.win_rate }}%</div>
+            <div class="stat-sub">{{ stats.winning_trades }}/{{ stats.total_trades }} trades won</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Total P&L</div>
+            <div class="stat-value {{ 'up' if stats.total_pnl >= 0 else 'down' }}">${{ "{:+,.0f}".format(stats.total_pnl) }}</div>
+            <div class="stat-sub">Avg win ${{ "{:,.0f}".format(stats.avg_win) }} / Avg loss ${{ "{:,.0f}".format(stats.avg_loss) }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Max Drawdown</div>
+            <div class="stat-value down">${{ "{:,.0f}".format(stats.max_drawdown) }}</div>
+            <div class="stat-sub">Worst losing streak</div>
+        </div>
+    </div>
+
+    <!-- Run Bot Section -->
+    <div class="run-section">
+        <div class="run-info">
+            <div class="run-title">◆ Run Bot Cycle</div>
+            <div class="run-sub">Scan the market for signals, check open positions, execute trades with AI reasoning</div>
+        </div>
+        <div style="display:flex;gap:10px">
+            <button class="btn btn-gold" id="run-btn" onclick="runBotCycle()" style="font-size:13px;padding:12px 28px">▶ Run Now</button>
+            <button class="btn btn-danger" onclick="resetPortfolio()" style="font-size:11px">Reset</button>
+        </div>
+    </div>
+
+    <div class="main-grid">
+        <!-- LEFT: Positions + History -->
+        <div>
+            <!-- Open Positions -->
+            <div class="card" style="margin-bottom:24px">
+                <div class="card-header">
+                    <div class="card-title">Open Positions</div>
+                    <div style="font-family:var(--mono);font-size:11px;color:var(--muted2)" id="positions-count">{{ stats.open_positions }} / 5 slots used</div>
+                </div>
+                <div id="positions-container">
+                {% if portfolio.positions %}
+                <table class="pos-table">
+                    <thead>
+                        <tr>
+                            <th>Ticker</th>
+                            <th>Shares</th>
+                            <th>Entry</th>
+                            <th>Current</th>
+                            <th>P&L</th>
+                            <th>Stop</th>
+                            <th>Target</th>
+                        </tr>
+                    </thead>
+                    <tbody id="positions-tbody">
+                    {% for ticker, pos in portfolio.positions.items() %}
+                    <tr>
+                        <td><span class="pos-ticker">{{ ticker }}</span></td>
+                        <td style="font-family:var(--mono)">{{ pos.shares }}</td>
+                        <td style="font-family:var(--mono)">${{ pos.entry_price }}</td>
+                        <td style="font-family:var(--mono)" id="curr-{{ ticker }}">—</td>
+                        <td style="font-family:var(--mono)" id="pnl-{{ ticker }}">—</td>
+                        <td style="font-family:var(--mono);color:var(--red)">${{ pos.stop_price }}</td>
+                        <td style="font-family:var(--mono);color:var(--green)">${{ pos.target_price }}</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div style="padding:32px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:12px">No open positions — run the bot to find signals</div>
+                {% endif %}
+                </div>
+            </div>
+
+            <!-- Trade History -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Trade History</div>
+                    <div style="font-family:var(--mono);font-size:11px;color:var(--muted2)">{{ stats.total_trades }} trades</div>
+                </div>
+                <div class="card-body" style="padding:0">
+                    <div id="trade-history-container" style="max-height:400px;overflow-y:auto">
+                    {% if portfolio.trade_history %}
+                        {% for trade in portfolio.trade_history | reverse %}
+                        <div style="padding:16px 24px;border-bottom:1px solid rgba(255,255,255,0.03)">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                                <div style="display:flex;align-items:center;gap:10px">
+                                    <span class="signal-badge {{ 'badge-buy' if trade.action == 'BUY' else 'badge-sell' }}">{{ trade.action }}</span>
+                                    <span style="font-family:var(--mono);font-weight:600">{{ trade.ticker }}</span>
+                                    <span style="font-family:var(--mono);font-size:11px;color:var(--muted2)">{{ trade.shares }} shares @ ${{ trade.exit_price }}</span>
+                                </div>
+                                <span style="font-family:var(--mono);font-size:13px;font-weight:600;color:{{ 'var(--green)' if trade.pnl >= 0 else 'var(--red)' }}">${{ "{:+,.0f}".format(trade.pnl) }} ({{ '+' if trade.pnl_pct >= 0 else '' }}{{ trade.pnl_pct }}%)</span>
+                            </div>
+                            <div style="font-size:11px;color:var(--muted2)">{{ trade.reason }}</div>
+                            {% if trade.ai_reasoning %}
+                            <div style="margin-top:8px;padding:10px;background:rgba(201,168,76,0.04);border:1px solid rgba(201,168,76,0.1);border-radius:6px;font-size:11px;color:var(--muted2);line-height:1.6">
+                                <span style="font-family:var(--mono);font-size:9px;color:var(--gold);font-weight:600;letter-spacing:1px">◆ AI — </span>{{ trade.ai_reasoning[:200] }}{% if trade.ai_reasoning|length > 200 %}...{% endif %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div style="padding:32px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:12px">No completed trades yet</div>
+                    {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT: Activity Feed + Strategy Info -->
+        <div>
+            <!-- Latest Activity -->
+            <div class="card" style="margin-bottom:24px">
+                <div class="card-header">
+                    <div class="card-title">Latest Bot Activity</div>
+                </div>
+                <div class="activity-feed" id="activity-feed">
+                    <div style="padding:24px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:12px">Run the bot to see activity</div>
+                </div>
+            </div>
+
+            <!-- Strategy Reference -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Bot Strategy Rules</div>
+                </div>
+                <div class="card-body" style="padding:16px">
+                    <div style="display:flex;flex-direction:column;gap:10px">
+                        <div style="background:var(--elevated);border-radius:8px;padding:12px">
+                            <div style="font-family:var(--mono);font-size:9px;color:var(--gold);font-weight:600;letter-spacing:1px;margin-bottom:4px">BUY CONDITIONS (need 3 of 5)</div>
+                            <div style="font-size:11px;color:var(--muted2);line-height:1.8">
+                                ① Price above 200-day MA<br>
+                                ② Price above 50-day MA<br>
+                                ③ MACD above signal line<br>
+                                ④ RSI between 35-65<br>
+                                ⑤ Volume above 7-day avg
+                            </div>
+                        </div>
+                        <div style="background:var(--elevated);border-radius:8px;padding:12px">
+                            <div style="font-family:var(--mono);font-size:9px;color:var(--red);font-weight:600;letter-spacing:1px;margin-bottom:4px">SELL CONDITIONS (any triggers)</div>
+                            <div style="font-size:11px;color:var(--muted2);line-height:1.8">
+                                ① -5% stop loss hit<br>
+                                ② +15% take profit hit<br>
+                                ③ MACD bearish crossover<br>
+                                ④ RSI > 75 while profitable
+                            </div>
+                        </div>
+                        <div style="background:var(--elevated);border-radius:8px;padding:12px">
+                            <div style="font-family:var(--mono);font-size:9px;color:var(--cyan);font-weight:600;letter-spacing:1px;margin-bottom:4px">RISK MANAGEMENT</div>
+                            <div style="font-size:11px;color:var(--muted2);line-height:1.8">
+                                Max 10% of portfolio per trade<br>
+                                Max 5 positions at once<br>
+                                Stop moves to breakeven at +8%
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+
+<script>
+const HAS_PORTFOLIO = {{ 'true' if has_portfolio else 'false' }};
+{% if has_portfolio %}
+const POSITIONS = {{ portfolio.positions | tojson }};
+{% endif %}
+
+function showLoading(text) {
+    document.getElementById('loading-text').textContent = text || 'Running...';
+    document.getElementById('loading-overlay').classList.add('active');
+}
+function hideLoading() {
+    document.getElementById('loading-overlay').classList.remove('active');
+}
+
+async function startPortfolio() {
+    showLoading('Initializing $100,000 paper portfolio...');
+    try {
+        const res  = await fetch('/simulator/start', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+            window.location.reload();
+        }
+    } catch(e) {
+        alert('Error starting portfolio');
+    }
+    hideLoading();
+}
+
+async function runBotCycle() {
+    const btn = document.getElementById('run-btn');
+    btn.disabled    = true;
+    btn.textContent = '⟳ Running...';
+    showLoading('Scanning market signals... this may take 30-60 seconds');
+
+    try {
+        const res  = await fetch('/simulator/run', { method: 'POST' });
+        const data = await res.json();
+
+        if (data.error) {
+            alert(data.error);
+            hideLoading();
+            btn.disabled    = false;
+            btn.textContent = '▶ Run Now';
+            return;
+        }
+
+        // Update activity feed
+        const feed    = document.getElementById('activity-feed');
+        const actions = data.actions || [];
+
+        if (actions.length === 0) {
+            feed.innerHTML = `<div style="padding:24px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:12px">
+                No signals fired this cycle. Market conditions don't meet entry criteria for new positions.
+            </div>`;
+        } else {
+            feed.innerHTML = actions.map(a => {
+                const isBuy  = a.type === 'BUY';
+                const color  = isBuy ? 'var(--green)' : (a.pnl >= 0 ? 'var(--green)' : 'var(--red)');
+                const badge  = isBuy ? 'badge-buy' : 'badge-sell';
+                const detail = isBuy
+                    ? `${a.shares} shares @ $${a.price} — Stop $${a.stop} / Target $${a.target}`
+                    : `Closed @ $${a.price} — P&L: $${a.pnl >= 0 ? '+' : ''}${a.pnl?.toFixed(0)} (${a.pnl_pct >= 0 ? '+' : ''}${a.pnl_pct}%)`;
+                const aiText = a.ai_reasoning ? a.ai_reasoning.substring(0, 250) : '';
+
+                return `<div class="activity-item">
+                    <div class="activity-header">
+                        <div style="display:flex;align-items:center;gap:8px">
+                            <span class="signal-badge ${badge}">${a.type}</span>
+                            <span style="font-family:var(--mono);font-weight:600;font-size:14px">${a.ticker}</span>
+                        </div>
+                        <span style="font-family:var(--mono);font-size:10px;color:var(--muted)">${new Date().toLocaleTimeString()}</span>
+                    </div>
+                    <div style="font-family:var(--mono);font-size:11px;color:var(--muted2);margin-bottom:8px">${detail}</div>
+                    ${aiText ? `<div style="padding:10px;background:rgba(201,168,76,0.04);border:1px solid rgba(201,168,76,0.1);border-radius:6px;font-size:11px;color:var(--muted2);line-height:1.6">
+                        <span style="font-family:var(--mono);font-size:9px;color:var(--gold);font-weight:600;letter-spacing:1px">◆ AI — </span>${aiText}${a.ai_reasoning?.length > 250 ? '...' : ''}
+                    </div>` : ''}
+                </div>`;
+            }).join('');
+        }
+
+        // Refresh page to show updated stats + positions
+        setTimeout(() => { window.location.reload(); }, 2000);
+
+    } catch(e) {
+        alert('Error running bot cycle');
+        btn.disabled    = false;
+        btn.textContent = '▶ Run Now';
+    }
+    hideLoading();
+}
+
+async function resetPortfolio() {
+    if (!confirm('Reset your portfolio? This will delete all trade history and start fresh with $100,000.')) return;
+    showLoading('Resetting portfolio...');
+    try {
+        await fetch('/simulator/reset', { method: 'POST' });
+        window.location.reload();
+    } catch(e) {}
+    hideLoading();
+}
+
+// Live price updates for open positions
+{% if has_portfolio %}
+async function updatePositionPrices() {
+    const tickers = Object.keys(POSITIONS);
+    if (!tickers.length) return;
+    for (const ticker of tickers) {
+        try {
+            const res  = await fetch('/api/stock/' + ticker);
+            const data = await res.json();
+            const p    = data.price;
+            if (!p) continue;
+            const entry   = POSITIONS[ticker].entry_price;
+            const curr    = p.price;
+            const pnlAmt  = ((curr - entry) * POSITIONS[ticker].shares);
+            const pnlPct  = ((curr - entry) / entry * 100).toFixed(2);
+            const col     = pnlAmt >= 0 ? 'var(--green)' : 'var(--red)';
+            const sign    = pnlAmt >= 0 ? '+' : '';
+
+            const currEl = document.getElementById('curr-' + ticker);
+            const pnlEl  = document.getElementById('pnl-' + ticker);
+            if (currEl) currEl.textContent = '$' + curr;
+            if (pnlEl)  pnlEl.innerHTML = `<span style="color:${col}">${sign}$${Math.abs(pnlAmt).toFixed(0)} (${sign}${pnlPct}%)</span>`;
+        } catch(e) {}
+    }
+}
+updatePositionPrices();
+{% endif %}
+</script>
+</body>
+</html>

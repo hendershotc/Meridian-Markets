@@ -1,0 +1,1455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meridian Markets — Intelligent Market Intelligence</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --void:     #04060f;
+            --deep:     #070b18;
+            --surface:  #0c1220;
+            --elevated: #111827;
+            --border:   #1a2540;
+            --border2:  #243050;
+            --gold:     #c9a84c;
+            --gold2:    #e8c97a;
+            --cyan:     #00e5ff;
+            --cyan2:    #40f0ff;
+            --green:    #00ff88;
+            --red:      #ff3b5c;
+            --orange:   #ff9640;
+            --text:     #e2e8f8;
+            --muted:    #4a5a7a;
+            --muted2:   #6a7a9a;
+            --mono:     'JetBrains Mono', monospace;
+            --display:  'Syne', sans-serif;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: var(--display);
+            background: var(--void);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+            cursor: default;
+        }
+
+        /* ─── CANVAS BACKGROUND ─── */
+        #bg-canvas {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* ─── SCAN LINE OVERLAY ─── */
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(0,229,255,0.012) 2px,
+                rgba(0,229,255,0.012) 4px
+            );
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* ─── NOISE GRAIN ─── */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: -50%;
+            width: 200%;
+            height: 200%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 1;
+            opacity: 0.4;
+            animation: grain 0.5s steps(2) infinite;
+        }
+        @keyframes grain { 0%,100%{transform:translate(0,0)} 25%{transform:translate(-2%,-1%)} 50%{transform:translate(1%,2%)} 75%{transform:translate(2%,-1%)} }
+
+        /* ─── ALL CONTENT ABOVE BACKGROUND ─── */
+        nav, .ticker-wrap, .page, footer { position: relative; z-index: 10; }
+
+        /* ─── NAV ─── */
+        nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 48px;
+            height: 64px;
+            background: rgba(4,6,15,0.85);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .nav-logo {
+            font-family: var(--display);
+            font-size: 16px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--text);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .nav-logo-mark {
+            width: 28px; height: 28px;
+            border: 1.5px solid var(--gold);
+            border-radius: 6px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 12px;
+            color: var(--gold);
+            font-weight: 700;
+        }
+        .nav-logo span { color: var(--gold); }
+
+        .nav-center {
+            display: flex;
+            gap: 2px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 4px;
+        }
+        .nav-tab {
+            padding: 6px 16px;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: var(--muted2);
+            cursor: pointer;
+            border-radius: 5px;
+            transition: all 0.2s;
+            text-decoration: none;
+            border: none;
+            background: none;
+            font-family: var(--display);
+        }
+        .nav-tab:hover { color: var(--text); }
+        .nav-tab.active { background: var(--border2); color: var(--cyan); }
+
+        .nav-right { display: flex; gap: 10px; align-items: center; }
+
+        .btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 8px 20px; border-radius: 6px;
+            font-size: 12px; font-weight: 700;
+            letter-spacing: 1px; text-transform: uppercase;
+            text-decoration: none; cursor: pointer; border: none;
+            font-family: var(--display); transition: all 0.25s;
+        }
+        .btn-ghost {
+            background: transparent;
+            color: var(--muted2);
+            border: 1px solid var(--border2);
+        }
+        .btn-ghost:hover { color: var(--text); border-color: var(--muted2); }
+        .btn-gold {
+            background: linear-gradient(135deg, var(--gold), var(--gold2));
+            color: var(--void);
+        }
+        .btn-gold:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(201,168,76,0.4); }
+
+        /* ─── MARKET STATUS ─── */
+        .market-pill {
+            display: flex; align-items: center; gap: 6px;
+            padding: 5px 12px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            font-family: var(--mono);
+            font-size: 11px;
+            color: var(--muted2);
+        }
+        .status-dot {
+            width: 6px; height: 6px; border-radius: 50%;
+        }
+        .dot-open  { background: var(--green); box-shadow: 0 0 6px var(--green); animation: blink 2s infinite; }
+        .dot-closed { background: var(--muted); }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+        /* ─── TICKER TAPE ─── */
+        .ticker-wrap {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            overflow: hidden;
+            padding: 10px 0;
+        }
+        .ticker-track {
+            display: flex; gap: 0;
+            animation: scroll-left 60s linear infinite;
+            width: max-content;
+        }
+        .ticker-track:hover { animation-play-state: paused; }
+        .ticker-item {
+            display: flex; align-items: center; gap: 8px;
+            padding: 0 28px;
+            border-right: 1px solid var(--border);
+            font-family: var(--mono);
+            font-size: 12px;
+            white-space: nowrap;
+        }
+        .ticker-sym { color: var(--muted2); font-weight: 500; }
+        .ticker-price { color: var(--text); font-weight: 400; }
+        .ticker-up   { color: var(--green); }
+        .ticker-down { color: var(--red); }
+        @keyframes scroll-left { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+
+        /* ─── PAGE LAYOUT ─── */
+        .page { max-width: 1440px; margin: 0 auto; padding: 0 48px 80px; }
+
+        /* ─── HERO ─── */
+        .hero {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: center;
+            padding: 80px 0 60px;
+            min-height: 80vh;
+        }
+
+        .hero-left { }
+
+        .hero-eyebrow {
+            display: inline-flex; align-items: center; gap: 8px;
+            font-family: var(--mono);
+            font-size: 11px;
+            font-weight: 500;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--cyan);
+            margin-bottom: 24px;
+            padding: 6px 14px;
+            border: 1px solid rgba(0,229,255,0.2);
+            border-radius: 100px;
+            background: rgba(0,229,255,0.05);
+        }
+        .hero-eyebrow::before {
+            content: '';
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: var(--cyan);
+            box-shadow: 0 0 8px var(--cyan);
+            animation: blink 1.5s infinite;
+        }
+
+        .hero-title {
+            font-size: clamp(40px, 5vw, 68px);
+            font-weight: 800;
+            line-height: 1.0;
+            letter-spacing: -2px;
+            margin-bottom: 24px;
+        }
+        .hero-title .line1 { display: block; color: var(--text); }
+        .hero-title .line2 {
+            display: block;
+            background: linear-gradient(90deg, var(--gold), var(--gold2), var(--cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-sub {
+            font-size: 16px;
+            color: var(--muted2);
+            line-height: 1.7;
+            max-width: 460px;
+            margin-bottom: 40px;
+            font-weight: 400;
+        }
+
+        .hero-actions { display: flex; gap: 12px; align-items: center; }
+
+        .hero-stat-row {
+            display: flex; gap: 32px;
+            margin-top: 48px;
+            padding-top: 32px;
+            border-top: 1px solid var(--border);
+        }
+        .hero-stat { }
+        .hero-stat-val {
+            font-family: var(--mono);
+            font-size: 22px;
+            font-weight: 500;
+            color: var(--text);
+        }
+        .hero-stat-label {
+            font-size: 11px;
+            color: var(--muted);
+            margin-top: 4px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        /* ─── HERO RIGHT: LIVE INDEX CARDS ─── */
+        .hero-right {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .index-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px 24px;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 16px;
+            align-items: center;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        .index-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(0,229,255,0.03), transparent);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .index-card:hover { border-color: rgba(0,229,255,0.3); transform: translateX(4px); }
+        .index-card:hover::before { opacity: 1; }
+        .index-card:hover { box-shadow: -4px 0 0 var(--cyan), 0 0 30px rgba(0,229,255,0.08); }
+
+        .index-name { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted2); margin-bottom: 6px; }
+        .index-price { font-family: var(--mono); font-size: 22px; font-weight: 500; color: var(--text); }
+        .index-change { font-family: var(--mono); font-size: 13px; margin-top: 3px; }
+        .up   { color: var(--green); }
+        .down { color: var(--red); }
+
+        .index-chart-wrap { width: 160px; height: 52px; }
+
+        /* ─── SECTION ─── */
+        .section {
+            padding: 60px 0;
+            border-top: 1px solid var(--border);
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.7s ease, transform 0.7s ease;
+        }
+        .section.visible { opacity: 1; transform: translateY(0); }
+
+        .section-eyebrow {
+            font-family: var(--mono);
+            font-size: 10px;
+            font-weight: 500;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--gold);
+            margin-bottom: 12px;
+        }
+        .section-title {
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin-bottom: 32px;
+        }
+
+        /* ─── SECTOR HEATMAP ─── */
+        .heatmap-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 8px;
+        }
+        .sector-tile {
+            border-radius: 10px;
+            padding: 16px;
+            cursor: default;
+            transition: all 0.25s;
+            border: 1px solid transparent;
+            position: relative;
+            overflow: hidden;
+        }
+        .sector-tile::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: rgba(255,255,255,0);
+            transition: background 0.2s;
+        }
+        .sector-tile:hover { transform: translateY(-3px); border-color: rgba(255,255,255,0.15); }
+        .sector-tile:hover::after { background: rgba(255,255,255,0.04); }
+        .sector-tile-name { font-size: 11px; font-weight: 700; letter-spacing: 0.5px; color: rgba(255,255,255,0.7); margin-bottom: 6px; }
+        .sector-tile-ticker { font-family: var(--mono); font-size: 10px; color: rgba(255,255,255,0.4); margin-bottom: 8px; }
+        .sector-tile-pct { font-family: var(--mono); font-size: 16px; font-weight: 500; }
+
+        /* ─── WATCHLIST PANEL (logged in) ─── */
+        .watchlist-panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+            background: var(--elevated);
+        }
+        .panel-title { font-size: 13px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted2); }
+        .panel-add { display: flex; gap: 8px; }
+        .panel-add input {
+            background: var(--surface);
+            border: 1px solid var(--border2);
+            border-radius: 6px;
+            padding: 7px 12px;
+            color: var(--text);
+            font-family: var(--mono);
+            font-size: 12px;
+            outline: none;
+            width: 90px;
+            text-transform: uppercase;
+            transition: border-color 0.2s;
+        }
+        .panel-add input:focus { border-color: var(--cyan); }
+        .panel-add button {
+            background: rgba(0,229,255,0.1);
+            border: 1px solid rgba(0,229,255,0.3);
+            border-radius: 6px;
+            padding: 7px 14px;
+            color: var(--cyan);
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: var(--display);
+            letter-spacing: 0.5px;
+            transition: all 0.2s;
+        }
+        .panel-add button:hover { background: rgba(0,229,255,0.2); }
+
+        .watchlist-table { width: 100%; border-collapse: collapse; }
+        .watchlist-table th {
+            font-family: var(--mono);
+            font-size: 10px;
+            font-weight: 500;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--muted);
+            padding: 12px 24px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        .watchlist-table td {
+            padding: 14px 24px;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+            vertical-align: middle;
+        }
+        .watchlist-table tr:last-child td { border-bottom: none; }
+        .watchlist-table tr { transition: background 0.15s; }
+        .watchlist-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+        .wl-ticker { font-family: var(--mono); font-weight: 500; font-size: 14px; color: var(--text); }
+        .wl-name   { font-size: 12px; color: var(--muted2); margin-top: 2px; }
+        .wl-price  { font-family: var(--mono); font-size: 15px; font-weight: 500; }
+        .wl-change { font-family: var(--mono); font-size: 12px; margin-top: 2px; }
+        .wl-signal { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 4px; font-size: 10px; font-weight: 700; letter-spacing: 1px; }
+        .sig-fav  { background: rgba(0,255,136,0.1); color: var(--green); border: 1px solid rgba(0,255,136,0.2); }
+        .sig-neu  { background: rgba(0,229,255,0.1); color: var(--cyan); border: 1px solid rgba(0,229,255,0.2); }
+        .sig-cau  { background: rgba(255,150,64,0.1); color: var(--orange); border: 1px solid rgba(255,150,64,0.2); }
+
+        .ai-btn {
+            display: inline-flex; align-items: center; gap: 5px;
+            background: none;
+            border: 1px solid var(--border2);
+            border-radius: 5px;
+            padding: 5px 10px;
+            color: var(--muted2);
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: var(--display);
+            transition: all 0.2s;
+            letter-spacing: 0.5px;
+        }
+        .ai-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+        .remove-btn {
+            background: none; border: none;
+            color: var(--muted); cursor: pointer;
+            font-size: 14px; padding: 4px 6px;
+            border-radius: 4px; transition: all 0.2s;
+            line-height: 1;
+        }
+        .remove-btn:hover { color: var(--red); background: rgba(255,59,92,0.1); }
+
+        /* ─── AI DRAWER ─── */
+        .ai-drawer {
+            display: none;
+            background: var(--elevated);
+            border-top: 1px solid var(--border);
+            padding: 20px 24px;
+            font-size: 13px;
+            color: var(--muted2);
+            line-height: 1.7;
+        }
+        .ai-drawer.open { display: block; }
+        .ai-section-label {
+            font-family: var(--mono);
+            font-size: 9px;
+            font-weight: 500;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--gold);
+            margin-bottom: 6px;
+            margin-top: 14px;
+        }
+        .ai-section-label:first-child { margin-top: 0; }
+        .ai-text { font-size: 13px; color: var(--text); line-height: 1.7; }
+        .ai-signal-badge {
+            display: inline-flex; align-items: center;
+            padding: 4px 12px; border-radius: 4px;
+            font-size: 11px; font-weight: 700; letter-spacing: 1px;
+            margin-bottom: 14px;
+        }
+        .ai-buy   { background: rgba(0,255,136,0.1); color: var(--green); border: 1px solid rgba(0,255,136,0.3); }
+        .ai-hold  { background: rgba(0,229,255,0.1); color: var(--cyan); border: 1px solid rgba(0,229,255,0.3); }
+        .ai-watch { background: rgba(255,150,64,0.1); color: var(--orange); border: 1px solid rgba(255,150,64,0.3); }
+        .ai-tip-box {
+            background: rgba(201,168,76,0.05);
+            border: 1px solid rgba(201,168,76,0.2);
+            border-radius: 8px;
+            padding: 12px 14px;
+            margin-top: 10px;
+        }
+
+        /* ─── PRO LOCK ─── */
+        .pro-lock-row td {
+            background: rgba(201,168,76,0.03);
+        }
+        .pro-lock-inline {
+            display: flex; align-items: center; gap: 10px;
+            font-size: 12px; color: var(--muted2);
+        }
+        .pro-lock-inline a {
+            color: var(--gold); text-decoration: none; font-weight: 700;
+            padding: 4px 10px; border: 1px solid rgba(201,168,76,0.3);
+            border-radius: 4px; font-size: 11px; transition: all 0.2s;
+        }
+        .pro-lock-inline a:hover { background: rgba(201,168,76,0.1); }
+
+        /* ─── NEWS GRID ─── */
+        .news-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+        .news-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+        .news-card:hover { border-color: rgba(201,168,76,0.3); box-shadow: 0 0 30px rgba(201,168,76,0.06); transform: translateY(-3px); }
+        .news-source-header {
+            padding: 10px 16px;
+            background: var(--elevated);
+            border-bottom: 1px solid var(--border);
+            font-family: var(--mono);
+            font-size: 10px;
+            font-weight: 500;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--gold);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .news-source-header::before {
+            content: '';
+            width: 5px; height: 5px;
+            border-radius: 50%;
+            background: var(--gold);
+        }
+        .news-items { padding: 8px 0; }
+        .news-item { padding: 10px 16px; border-bottom: 1px solid var(--border); transition: background 0.15s; }
+        .news-item:last-child { border-bottom: none; }
+        .news-item:hover { background: rgba(255,255,255,0.02); }
+        .news-item a {
+            color: var(--text);
+            text-decoration: none;
+            font-size: 13px;
+            line-height: 1.5;
+            display: block;
+            transition: color 0.2s;
+        }
+        .news-item a:hover { color: var(--gold2); }
+        .news-time { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-top: 4px; }
+
+        /* ─── CTA ─── */
+        .cta-block {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 48px;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 40px;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .cta-block::before {
+            content: '';
+            position: absolute;
+            top: -60px; right: -60px;
+            width: 240px; height: 240px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(201,168,76,0.08), transparent 70%);
+            pointer-events: none;
+        }
+        .cta-title { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 10px; }
+        .cta-sub { font-size: 14px; color: var(--muted2); line-height: 1.6; }
+        .cta-actions { display: flex; flex-direction: column; gap: 10px; align-items: flex-end; }
+
+        /* ─── FOOTER ─── */
+        footer {
+            border-top: 1px solid var(--border);
+            padding: 24px 48px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: var(--mono);
+            font-size: 11px;
+            color: var(--muted);
+        }
+
+        /* ─── SKELETON ─── */
+        .skel { background: linear-gradient(90deg, var(--border) 25%, var(--border2) 50%, var(--border) 75%); background-size: 200% 100%; animation: skel 1.5s infinite; border-radius: 4px; display: inline-block; }
+        @keyframes skel { from{background-position:200% 0} to{background-position:-200% 0} }
+
+        /* ─── SCROLL REVEAL ─── */
+        .reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.6s ease, transform 0.6s ease; }
+        .reveal.visible { opacity: 1; transform: none; }
+    </style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+
+<!-- NAV -->
+<nav>
+    <a href="/" class="nav-logo">
+        <div class="nav-logo-mark">M</div>
+        Meridian<span>Markets</span>
+    </a>
+
+    <div class="nav-center">
+        <button class="nav-tab active" onclick="scrollToSection('markets-section');setActiveTab(this)">Markets</button>
+        {% if current_user and current_user.is_authenticated %}
+        <button class="nav-tab" onclick="scrollToSection('sectors-section');setActiveTab(this)">Sectors</button>
+        <button class="nav-tab" onclick="scrollToSection('watchlist-section');setActiveTab(this)">Watchlist</button>
+        {% endif %}
+        <button class="nav-tab" onclick="scrollToSection('news-section');setActiveTab(this)">News</button>
+    </div>
+
+    <div class="nav-right">
+        <div class="market-pill">
+            <div class="status-dot" id="status-dot"></div>
+            <span id="status-text" style="font-size:11px">—</span>
+        </div>
+        {% if current_user and current_user.is_authenticated %}
+            <a href="/simulator" class="btn btn-ghost" style="border-color:rgba(201,168,76,0.3);color:var(--gold);font-size:11px">◆ Simulator</a>
+            <a href="/settings" class="btn btn-ghost">{{ current_user.name.split()[0] }}</a>
+            <a href="/logout"   class="btn btn-ghost">Log Out</a>
+        {% else %}
+            <a href="/login"  class="btn btn-ghost">Log In</a>
+            <a href="/signup" class="btn btn-gold">Get Started</a>
+        {% endif %}
+    </div>
+</nav>
+
+<!-- TICKER TAPE -->
+<div class="ticker-wrap">
+    <div class="ticker-track" id="ticker-track">
+        <div class="ticker-item"><span class="ticker-sym">SPY</span><span class="ticker-price skel" style="width:60px;height:14px"></span></div>
+    </div>
+</div>
+
+<div class="page">
+
+    <!-- HERO -->
+    <section class="hero" id="markets-section">
+        <div class="hero-left reveal">
+            <div class="hero-eyebrow">Live Market Intelligence</div>
+            <h1 class="hero-title">
+                <span class="line1">Markets move fast.</span>
+                <span class="line2">Stay ahead.</span>
+            </h1>
+            <p class="hero-sub">
+                Real-time indices, sector analysis, AI-powered stock insights, and curated news from the world's leading financial sources — all in one place.
+            </p>
+            {% if current_user and current_user.is_authenticated %}
+            <div class="hero-actions">
+                <a href="#watchlist-section" onclick="scrollToSection('watchlist-section')" class="btn btn-gold">View My Watchlist</a>
+                {% if not current_user.is_pro %}
+                <a href="/donate" class="btn btn-ghost">Unlock AI Features</a>
+                {% endif %}
+            </div>
+            {% else %}
+            <div class="hero-actions">
+                <a href="/signup" class="btn btn-gold">Start for Free</a>
+                <a href="/login"  class="btn btn-ghost">Log In</a>
+            </div>
+            {% endif %}
+            <div class="hero-stat-row">
+                <div class="hero-stat">
+                    <div class="hero-stat-val" id="spy-price">—</div>
+                    <div class="hero-stat-label">S&amp;P 500</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="hero-stat-val" id="qqq-price">—</div>
+                    <div class="hero-stat-label">NASDAQ</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="hero-stat-val" id="dia-price">—</div>
+                    <div class="hero-stat-label">Dow Jones</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="hero-stat-val" id="vix-val">—</div>
+                    <div class="hero-stat-label">VIX</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="hero-right reveal" style="transition-delay:0.15s">
+            <div class="index-card" id="card-SPY">
+                <div>
+                    <div class="index-name">S&amp;P 500 — SPY</div>
+                    <div class="index-price skel" style="width:110px;height:26px;margin-top:6px"></div>
+                    <div class="index-change" style="margin-top:6px"><span class="skel" style="width:80px;height:14px"></span></div>
+                </div>
+                <div class="index-chart-wrap"><canvas id="chart-SPY"></canvas></div>
+            </div>
+            <div class="index-card" id="card-QQQ">
+                <div>
+                    <div class="index-name">NASDAQ 100 — QQQ</div>
+                    <div class="index-price skel" style="width:110px;height:26px;margin-top:6px"></div>
+                    <div class="index-change" style="margin-top:6px"><span class="skel" style="width:80px;height:14px"></span></div>
+                </div>
+                <div class="index-chart-wrap"><canvas id="chart-QQQ"></canvas></div>
+            </div>
+            <div class="index-card" id="card-DIA">
+                <div>
+                    <div class="index-name">DOW JONES — DIA</div>
+                    <div class="index-price skel" style="width:110px;height:26px;margin-top:6px"></div>
+                    <div class="index-change" style="margin-top:6px"><span class="skel" style="width:80px;height:14px"></span></div>
+                </div>
+                <div class="index-chart-wrap"><canvas id="chart-DIA"></canvas></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTOR HEATMAP -->
+    <section class="section reveal" id="sectors-section">
+        <div class="section-eyebrow">Sector Performance</div>
+        <div class="section-title">Today's sector heat map</div>
+        <div class="heatmap-grid" id="heatmap-grid">
+            {% for i in range(9) %}
+            <div class="sector-tile" style="background:var(--surface)">
+                <div class="sector-tile-name skel" style="width:80px;height:12px"></div>
+                <div class="sector-tile-pct skel" style="width:50px;height:18px;margin-top:8px"></div>
+            </div>
+            {% endfor %}
+        </div>
+      <!-- Sector drill-down panel -->
+        <div id="sector-drill" style="display:none;margin-top:12px;background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:24px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                <div id="sector-drill-title" style="font-size:14px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--cyan);"></div>
+                <div style="display:flex;gap:10px;align-items:center;">
+                    <button id="sector-ai-btn" onclick="loadSectorAI()" style="background:linear-gradient(135deg,var(--gold),var(--gold2));border:none;color:var(--void);font-family:var(--display);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:7px 14px;border-radius:6px;cursor:pointer;">◆ AI Analysis</button>
+                    <button onclick="closeSectorDrill()" style="background:none;border:none;color:var(--muted2);font-size:18px;cursor:pointer;">✕</button>
+                </div>
+            </div>
+            <div id="sector-ai-result" style="display:none;background:var(--elevated);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:20px;font-size:13px;line-height:1.7;color:var(--text);"></div>
+            <div id="sector-stocks-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;"></div>
+        </div>
+    </section>
+
+    <!-- WATCHLIST (logged in only) -->
+    {% if current_user and current_user.is_authenticated %}
+    <section class="section reveal" id="watchlist-section">
+        <div class="section-eyebrow">Your Portfolio</div>
+        <div class="section-title">Watchlist</div>
+        <div class="watchlist-panel">
+            <div class="panel-header">
+                <div class="panel-title">{{ watchlist|length }} stocks tracked</div>
+                <div style="display:flex;gap:10px;align-items:center;">
+                    <button onclick="loadPortfolioAI()" id="portfolio-ai-btn" style="background:linear-gradient(135deg,var(--gold),var(--gold2));border:none;color:var(--void);font-family:var(--display);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:7px 14px;border-radius:6px;cursor:pointer;">◆ AI Analysis</button>
+                </div>
+                    <form class="panel-add" onsubmit="addTicker(event)">
+                    <input type="text" id="add-input" placeholder="TICKER" maxlength="6">
+                <button type="submit">+ Add</button>
+                </form>
+            </div>
+            <table class="watchlist-table">
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Price</th>
+                        <th>Change</th>
+                        <th>Signal</th>
+                        <th>MA Context</th>
+                        <th>Volume</th>
+                        {% if current_user.is_pro %}<th>AI</th>{% endif %}
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="watchlist-tbody">
+                    {% for ticker in watchlist %}
+                    <tr id="row-{{ ticker }}">
+                        <td>
+                            <div class="wl-ticker"><a href="/stock/{{ ticker }}" style="color:inherit;text-decoration:none;">{{ ticker }}</a></div>
+                            <div class="wl-name" id="wl-name-{{ ticker }}">Loading...</div>
+                        </td>
+                        <td>
+                            <div class="wl-price" id="wl-price-{{ ticker }}">—</div>
+                        </td>
+                        <td>
+                            <div class="wl-change" id="wl-change-{{ ticker }}">—</div>
+                        </td>
+                        <td><span id="wl-sig-{{ ticker }}">—</span></td>
+                        <td><span id="wl-ma-{{ ticker }}" style="font-size:11px;color:var(--muted2)">—</span></td>
+                        <td><span id="wl-vol-{{ ticker }}" style="font-family:var(--mono);font-size:11px;color:var(--muted2)">—</span></td>
+                        {% if current_user.is_pro %}
+                        <td>
+                            <button class="ai-btn" id="ai-btn-{{ ticker }}" onclick="loadAI('{{ ticker }}')">
+                                ◆ Analyze
+                            </button>
+                        </td>
+                        {% endif %}
+                        <td><button class="remove-btn" onclick="removeTicker('{{ ticker }}')">✕</button></td>
+                    </tr>
+                    <tr id="ai-row-{{ ticker }}" style="display:none">
+                        <td colspan="{% if current_user.is_pro %}8{% else %}7{% endif %}" style="padding:0">
+                            <div class="ai-drawer" id="ai-drawer-{{ ticker }}"></div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% if not current_user.is_pro %}
+                    <tr class="pro-lock-row">
+                        <td colspan="7">
+                            <div class="pro-lock-inline">
+                                ◆ AI insights, signals &amp; trading tips are available for supporters
+                                <a href="/donate">Unlock for $5</a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+    {% else %}
+    <!-- CTA for logged out users -->
+    <section class="section reveal">
+        <div class="cta-block">
+            <div>
+                <div class="cta-title">Build your personal watchlist</div>
+                <div class="cta-sub">Sign up free to track your stocks with real-time data, earnings alerts, and AI-powered analysis. Donate $5 to unlock AI insights, signals, and personalized trading tips.</div>
+            </div>
+            <div class="cta-actions">
+                <a href="/signup" class="btn btn-gold">Create Free Account</a>
+                <a href="/login"  class="btn btn-ghost">Log In</a>
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- NEWS -->
+    <section class="section reveal" id="news-section">
+        <div class="section-eyebrow">Market Intelligence</div>
+        <div class="section-title">Latest financial news</div>
+        <div class="news-grid" id="news-grid">
+            {% for i in range(4) %}
+            <div class="news-card">
+                <div class="news-source-header">Loading...</div>
+                <div class="news-items">
+                    {% for j in range(4) %}
+                    <div class="news-item"><div class="skel" style="width:90%;height:13px;margin-bottom:4px"></div><div class="skel" style="width:60%;height:13px"></div></div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+</div>
+
+<footer>
+    <span>Meridian Markets © 2026</span>
+    <span>DATA: YAHOO FINANCE &nbsp;|&nbsp; AI: ANTHROPIC CLAUDE &nbsp;|&nbsp; NOT FINANCIAL ADVICE</span>
+</footer>
+
+<script>
+// ─── BACKGROUND CANVAS ANIMATION ───
+(function() {
+    const canvas = document.getElementById('bg-canvas');
+    const ctx    = canvas.getContext('2d');
+    let W, H, particles = [], lines = [];
+
+    function resize() {
+        W = canvas.width  = window.innerWidth;
+        H = canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    // Create grid nodes
+    for (let i = 0; i < 60; i++) {
+        particles.push({
+            x: Math.random() * 1440,
+            y: Math.random() * 900,
+            vx: (Math.random() - 0.5) * 0.15,
+            vy: (Math.random() - 0.5) * 0.15,
+            size: Math.random() * 1.5 + 0.5
+        });
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, W, H);
+
+        // Draw connections
+        for (let i = 0; i < particles.length; i++) {
+            for (let j = i + 1; j < particles.length; j++) {
+                const dx   = particles[i].x - particles[j].x;
+                const dy   = particles[i].y - particles[j].y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist < 180) {
+                    ctx.beginPath();
+                    ctx.strokeStyle = `rgba(0,229,255,${0.04 * (1 - dist/180)})`;
+                    ctx.lineWidth   = 0.5;
+                    ctx.moveTo(particles[i].x, particles[i].y);
+                    ctx.lineTo(particles[j].x, particles[j].y);
+                    ctx.stroke();
+                }
+            }
+        }
+
+        // Draw nodes
+        particles.forEach(p => {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(0,229,255,0.15)';
+            ctx.fill();
+
+            // Update
+            p.x += p.vx;
+            p.y += p.vy;
+            if (p.x < 0 || p.x > W) p.vx *= -1;
+            if (p.y < 0 || p.y > H) p.vy *= -1;
+        });
+
+        // Subtle gold accent lines
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(201,168,76,0.04)';
+        ctx.lineWidth   = 1;
+        for (let x = 0; x < W; x += 120) {
+            ctx.moveTo(x, 0); ctx.lineTo(x, H);
+        }
+        ctx.stroke();
+
+        requestAnimationFrame(draw);
+    }
+    draw();
+})();
+
+// ─── MARKET STATUS ───
+const now        = new Date();
+const isWeekday  = now.getDay() >= 1 && now.getDay() <= 5;
+const afterOpen  = now.getHours() > 9 || (now.getHours() === 9 && now.getMinutes() >= 30);
+const beforeClose = now.getHours() < 16;
+const marketOpen = isWeekday && afterOpen && beforeClose;
+document.getElementById('status-dot').className = 'status-dot ' + (marketOpen ? 'dot-open' : 'dot-closed');
+document.getElementById('status-text').textContent = marketOpen ? 'MARKET OPEN' : 'MARKET CLOSED';
+
+// ─── SCROLL REVEAL ───
+const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); } });
+}, { threshold: 0.1 });
+document.querySelectorAll('.reveal, .section').forEach(el => observer.observe(el));
+
+function scrollToSection(id) {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ─── TILE COLOR ───
+function tileColor(pct) {
+    if (pct <= -3)  return ['#3d0a0a','#ff6b6b'];
+    if (pct <= -2)  return ['#2d0d0d','#ff5050'];
+    if (pct <= -1)  return ['#1f1010','#e05050'];
+    if (pct <   0)  return ['#131515','#c07070'];
+    if (pct <   1)  return ['#0a1a12','#60d090'];
+    if (pct <   2)  return ['#0a2015','#40d080'];
+    if (pct <   3)  return ['#062018','#20d070'];
+    return                  ['#032515','#00ff88'];
+}
+
+// ─── LOAD INDICES ───
+async function loadIndices() {
+    try {
+        const res  = await fetch('/api/markets/indices');
+        const data = await res.json();
+
+        const map = { SPY:'S&P 500 — SPY', QQQ:'NASDAQ 100 — QQQ', DIA:'DOW JONES — DIA' };
+        const stat = { SPY:'spy-price', QQQ:'qqq-price', DIA:'dia-price' };
+
+        const tickerItems = [];
+
+        Object.entries(data).forEach(([ticker, d]) => {
+            if (!d || d.error) return;
+            const up   = d.change_pct >= 0;
+            const col  = up ? 'var(--green)' : 'var(--red)';
+            const sign = up ? '+' : '';
+
+            // Update hero stat
+            const statEl = document.getElementById(stat[ticker]);
+            if (statEl) statEl.textContent = '$' + d.current;
+
+            // Update index card
+            const card = document.getElementById('card-' + ticker);
+            if (card) {
+                card.querySelector('.index-name').textContent = map[ticker];
+                card.querySelector('.index-price').outerHTML =
+                    '<div class="index-price">$' + d.current + '</div>';
+                card.querySelector('.index-change').outerHTML =
+                    '<div class="index-change" style="color:' + col + '">' + sign + d.change_pct + '% today</div>';
+            }
+
+            // Draw chart
+            const canvas = document.getElementById('chart-' + ticker);
+            if (canvas && d.prices && d.prices.length > 1) {
+                const gradient = canvas.getContext('2d').createLinearGradient(0, 0, 0, 60);
+                gradient.addColorStop(0, up ? 'rgba(0,255,136,0.3)' : 'rgba(255,59,92,0.3)');
+                gradient.addColorStop(1, 'rgba(0,0,0,0)');
+                new Chart(canvas.getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: d.prices.map((_,i) => i),
+                        datasets: [{ data: d.prices, borderColor: up ? '#00ff88' : '#ff3b5c', borderWidth: 1.5, pointRadius: 0, fill: true, backgroundColor: gradient, tension: 0.3 }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => '$' + c.parsed.y.toFixed(2) } } }, scales: { x: { display: false }, y: { display: false, grace: '5%' } } }
+                });
+            }
+
+            // Ticker tape item
+            tickerItems.push({ sym: ticker, price: d.current, pct: d.change_pct, up });
+        });
+
+        buildTickerTape(tickerItems);
+
+    } catch(e) { console.error('Indices error', e); }
+}
+
+function setActiveTab(el) {
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+}
+
+// ─── SCROLL SPY ───
+function initScrollSpy() {
+    const sections = [
+        { id: 'markets-section',   label: 'Markets' },
+        { id: 'sectors-section',   label: 'Sectors' },
+        { id: 'watchlist-section', label: 'Watchlist' },
+        { id: 'news-section',      label: 'News' },
+    ];
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const label = sections.find(s => s.id === entry.target.id)?.label;
+                if (label) {
+                    document.querySelectorAll('.nav-tab').forEach(t => {
+                        t.classList.toggle('active', t.textContent.trim() === label);
+                    });
+                }
+            }
+        });
+    }, { threshold: 0.3 });
+
+    sections.forEach(s => {
+        const el = document.getElementById(s.id);
+        if (el) observer.observe(el);
+    });
+}
+
+// ─── TICKER TAPE ───
+const TICKER_STOCKS = ['SPY','QQQ','DIA','AAPL','MSFT','NVDA','TSLA','AMZN','META','GOOGL','JPM','GLD'];
+async function buildTickerTape(baseItems) {
+    try {
+        const allItems = [...baseItems];
+        for (const ticker of TICKER_STOCKS.slice(3)) {
+            try {
+                const r = await fetch('/api/stock/' + ticker);
+                const d = await r.json();
+                if (d.price && !d.price.error) {
+                    allItems.push({ sym: ticker, price: d.price.price, pct: d.price.change_pct, up: d.price.change_pct >= 0 });
+                }
+            } catch(e) {}
+        }
+        const html = allItems.map(item => {
+            const sign = item.up ? '+' : '';
+            const cls  = item.up ? 'ticker-up' : 'ticker-down';
+            return `<div class="ticker-item"><span class="ticker-sym">${item.sym}</span><span class="ticker-price">$${item.price}</span><span class="${cls}">${sign}${item.pct}%</span></div>`;
+        }).join('');
+        const track = document.getElementById('ticker-track');
+        track.innerHTML = html + html; // duplicate for loop
+    } catch(e) {}
+}
+
+// ─── Sector Drill Down ───
+let _activeSector = null;
+
+async function openSectorDrill(etfTicker, label) {
+    if (_activeSector === etfTicker) { closeSectorDrill(); return; }
+    if (_activeSector) {
+        const prev = document.getElementById('tile-' + _activeSector);
+        if (prev) prev.style.outline = '';
+    }
+    _activeSector = etfTicker;
+    const tile = document.getElementById('tile-' + etfTicker);
+    if (tile) tile.style.outline = '2px solid var(--cyan)';
+
+    const drill  = document.getElementById('sector-drill');
+    const title  = document.getElementById('sector-drill-title');
+    const stocks = document.getElementById('sector-stocks-grid');
+    title.textContent = label + ' — Top Stocks';
+    stocks.innerHTML  = '<div style="color:var(--muted);font-family:var(--mono);font-size:13px;">Loading...</div>';
+    drill.style.display = 'block';
+    drill.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    try {
+        const res  = await fetch('/api/sector/' + encodeURIComponent(label));
+        const data = await res.json();
+        if (!data.length) { stocks.innerHTML = '<div style="color:var(--muted);">No data available.</div>'; return; }
+        stocks.innerHTML = data.map(s => {
+            const up   = s.change_pct >= 0;
+            const col  = up ? 'var(--green)' : 'var(--red)';
+            const sign = up ? '+' : '';
+            return `<a href="/stock/${s.ticker}" style="background:var(--elevated);border:1px solid var(--border);border-radius:8px;padding:14px 16px;display:block;text-decoration:none;transition:all 0.2s;">
+                <div style="font-family:var(--mono);font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px;">${s.ticker}</div>
+                <div style="font-size:10px;color:var(--muted2);margin-bottom:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${s.name || s.ticker}</div>
+                <div style="font-family:var(--mono);font-size:15px;color:var(--text);">$${parseFloat(s.price).toFixed(2)}</div>
+                <div style="font-family:var(--mono);font-size:11px;color:${col};margin-top:3px;">${sign}${parseFloat(s.change_pct).toFixed(2)}%</div>
+            </a>`;
+        }).join('');
+    } catch(e) {
+        stocks.innerHTML = '<div style="color:var(--muted);">Could not load stocks.</div>';
+    }
+}
+
+function closeSectorDrill() {
+    document.getElementById('sector-drill').style.display = 'none';
+    if (_activeSector) {
+        const tile = document.getElementById('tile-' + _activeSector);
+        if (tile) tile.style.outline = '';
+        _activeSector = null;
+    }
+}
+
+async function loadSectorAI() {
+    const btn    = document.getElementById('sector-ai-btn');
+    const result = document.getElementById('sector-ai-result');
+    if (!_activeSector) return;
+
+    const title = document.getElementById('sector-drill-title').textContent.replace(' — Top Stocks', '');
+    btn.textContent = '⟳ Loading...';
+    btn.disabled = true;
+    result.style.display = 'block';
+    result.innerHTML = '<span style="color:var(--muted);font-family:var(--mono);">Analyzing ' + title + '...</span>';
+
+    try {
+        const res  = await fetch('/api/ai/sector/' + encodeURIComponent(title));
+        const data = await res.json();
+        const s    = data.sections || {};
+        result.innerHTML =
+            (s.overview  ? '<div style="margin-bottom:12px"><span style="color:var(--gold);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;">Overview</span><div style="margin-top:6px">' + s.overview + '</div></div>' : '') +
+            (s.momentum  ? '<div style="margin-bottom:12px"><span style="color:var(--gold);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;">Momentum</span><div style="margin-top:6px">' + s.momentum + '</div></div>' : '') +
+            (s.risks     ? '<div style="margin-bottom:12px"><span style="color:var(--gold);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;">Risks</span><div style="margin-top:6px">' + s.risks + '</div></div>' : '') +
+            (s.signal    ? '<div><span style="color:var(--gold);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;">Signal</span><div style="margin-top:6px">' + s.signal + '</div></div>' : '');
+        btn.textContent = '◆ AI Analysis';
+        btn.disabled = false;
+    } catch(e) {
+        result.innerHTML = '<span style="color:var(--muted);">Analysis unavailable.</span>';
+        btn.textContent = '◆ Retry';
+        btn.disabled = false;
+    }
+}
+
+// ─── SECTOR HEATMAP ───
+async function loadSectors() {
+    try {
+        const res  = await fetch('/api/markets/sectorheatmap');
+        const data = await res.json();
+        const grid = document.getElementById('heatmap-grid');
+        const sorted = [...data].sort((a, b) => b.change_pct - a.change_pct);
+        grid.innerHTML = sorted.map(s => {
+            const [bg, textCol] = tileColor(s.change_pct);
+            const sign = s.change_pct >= 0 ? '+' : '';
+            return `<div class="sector-tile" style="background:${bg};cursor:pointer" onclick="openSectorDrill('${s.ticker}', '${s.label}')">
+                <div class="sector-tile-name">${s.label}</div>
+                <div class="sector-tile-ticker">${s.ticker}</div>
+                <div class="sector-tile-pct" style="color:${textCol}">${sign}${s.change_pct}%</div>
+            </div>`;
+        }).join('');
+    } catch(e) { console.error('Sectors error', e); }
+}
+
+async function loadPortfolioAI() {
+    const btn = document.getElementById('portfolio-ai-btn');
+    btn.textContent = '⟳ Loading...';
+    btn.disabled = true;
+
+    // Show result panel below watchlist header
+    let result = document.getElementById('portfolio-ai-result');
+    if (!result) {
+        result = document.createElement('div');
+        result.id = 'portfolio-ai-result';
+        result.style = 'margin:0 24px 20px;background:var(--elevated);border:1px solid var(--border);border-radius:8px;padding:16px;font-size:13px;line-height:1.7;color:var(--text);';
+        document.querySelector('.watchlist-panel').insertBefore(result, document.querySelector('.watchlist-table'));
+    }
+    result.style.display = 'block';
+    result.innerHTML = '<span style="color:var(--muted);font-family:var(--mono);">Analyzing your portfolio...</span>';
+
+    try {
+        const res  = await fetch('/api/ai/portfolio');
+        const data = await res.json();
+        if (data.error) { result.innerHTML = '<span style="color:var(--muted);">Analysis unavailable — ' + data.error + '</span>'; return; }
+        const s = data.sections || {};
+        result.innerHTML =
+            (s.overview  ? '<div style="margin-bottom:12px"><span style="color:var(--gold);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;">Portfolio Overview</span><div style="margin-top:6px">' + s.overview + '</div></div>' : '') +
+            (s.exposure  ? '<div style="margin-bottom:12px"><span style="color:var(--gold);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;">Sector Exposure</span><div style="margin-top:6px">' + s.exposure + '</div></div>' : '') +
+            (s.strongest ? '<div style="margin-bottom:12px"><span style="color:var(--gold);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;">Strongest Positions</span><div style="margin-top:6px">' + s.strongest + '</div></div>' : '') +
+            (s.weakest   ? '<div style="margin-bottom:12px"><span style="color:var(--gold);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;">Weakest Positions</span><div style="margin-top:6px">' + s.weakest + '</div></div>' : '') +
+            (s.risk      ? '<div style="margin-bottom:12px"><span style="color:var(--gold);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;">Portfolio Risk</span><div style="margin-top:6px">' + s.risk + '</div></div>' : '') +
+            (s.actions   ? '<div><span style="color:var(--gold);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;">Recommended Actions</span><div style="margin-top:6px">' + s.actions + '</div></div>' : '');
+        btn.textContent = '◆ AI Analysis';
+        btn.disabled = false;
+    } catch(e) {
+        result.innerHTML = '<span style="color:var(--muted);">Analysis unavailable.</span>';
+        btn.textContent = '◆ Retry';
+        btn.disabled = false;
+    }
+}
+
+// ─── NEWS ───
+async function loadNews() {
+    try {
+        const res  = await fetch('/api/markets/news');
+        const data = await res.json();
+        const bySource = {};
+        data.forEach(item => {
+            if (!bySource[item.source]) bySource[item.source] = [];
+            bySource[item.source].push(item);
+        });
+        const grid = document.getElementById('news-grid');
+        if (Object.keys(bySource).length === 0) {
+            grid.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:20px">News feeds temporarily unavailable.</div>';
+            return;
+        }
+        grid.innerHTML = Object.entries(bySource).map(([src, items]) => {
+            const newsHtml = items.slice(0, 5).map(item => {
+                let time = '';
+                if (item.pubDate) {
+                    try { time = '<div class="news-time">' + new Date(item.pubDate).toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit'}) + '</div>'; } catch(e) {}
+                }
+                return `<div class="news-item"><a href="${item.link}" target="_blank" rel="noopener">${item.title}</a>${time}</div>`;
+            }).join('');
+            return `<div class="news-card"><div class="news-source-header">${src}</div><div class="news-items">${newsHtml}</div></div>`;
+        }).join('');
+    } catch(e) {
+        document.getElementById('news-grid').innerHTML = '<div style="color:var(--muted);font-size:13px;padding:20px">News temporarily unavailable.</div>';
+    }
+}
+
+// ─── VIX ───
+async function loadVIX() {
+    try {
+        const r = await fetch('/api/stock/%5EVIX');
+        const d = await r.json();
+        if (d.price && !d.price.error) {
+            const el = document.getElementById('vix-val');
+            if (el) {
+                el.textContent  = d.price.price;
+                el.style.color  = d.price.price > 20 ? 'var(--red)' : d.price.price > 15 ? 'var(--orange)' : 'var(--green)';
+            }
+        }
+    } catch(e) {}
+}
+
+{% if current_user and current_user.is_authenticated %}
+const WATCHLIST = {{ watchlist | tojson }};
+const IS_PRO    = {{ 'true' if current_user.is_pro else 'false' }};
+const EXP_LEVEL = "{{ current_user.experience_level }}";
+
+// ─── APPLY PRICE DATA TO A ROW ───
+function applyPriceToRow(ticker, p) {
+    if (!p || p.error) return;
+    const up   = p.change_pct >= 0;
+    const sign = up ? '+' : '';
+    const col  = up ? 'var(--green)' : 'var(--red)';
+    const el   = document.getElementById('wl-price-' + ticker);
+    if (el) el.innerHTML = '<span style="font-family:var(--mono)">' +
+        (up ? '<span style="color:var(--green)">▲</span>' : '<span style="color:var(--red)">▼</span>') +
+        ' $' + p.price + '</span>';
+    const ce = document.getElementById('wl-change-' + ticker);
+    if (ce) ce.innerHTML = '<span style="color:' + col + ';font-family:var(--mono)">' +
+        sign + p.change_pct + '% (' + sign + '$' + (p.change || '') + ')</span>';
+    const ve = document.getElementById('wl-vol-' + ticker);
+    if (ve) ve.textContent = p.vol_signal || '—';
+    const mae = document.getElementById('wl-ma-' + ticker);
+    if (mae && p.ma_context) mae.textContent = p.ma_context.split(' - ')[1] || p.ma_context;
+}
+
+// ─── LOAD WATCHLIST STOCKS (parallel — all fetches fire at once) ───
+async function loadWatchlist() {
+    // Fire all requests simultaneously instead of one at a time
+    const fetches = WATCHLIST.map(ticker =>
+        fetch('/api/stock/' + ticker)
+            .then(r => r.json())
+            .then(data => ({ ticker, data }))
+            .catch(() => ({ ticker, data: null }))
+    );
+    const results = await Promise.all(fetches);
+
+    for (const { ticker, data } of results) {
+        if (!data) continue;
+        applyPriceToRow(ticker, data.price);
+        const f = data.fundamentals;
+        if (f && !f.error && !f.note) {
+            const ne = document.getElementById('wl-name-' + ticker);
+            if (ne) ne.textContent = f.company_name || ticker;
+            const sig      = (f.signal || '').toUpperCase();
+            const sigClass = sig === 'FAVORABLE' ? 'sig-fav' : sig === 'CAUTION' ? 'sig-cau' : 'sig-neu';
+            const se = document.getElementById('wl-sig-' + ticker);
+            if (se) se.innerHTML = '<span class="wl-signal ' + sigClass + '">' + sig + '</span>';
+        }
+    }
+}
+
+// ─── LIVE PRICE STREAM (SSE — updates prices in real-time after initial load) ───
+function startLivePrices() {
+    if (typeof EventSource === 'undefined') return;
+    const es = new EventSource('/api/live-prices');
+    es.onmessage = e => {
+        try {
+            const prices = JSON.parse(e.data);
+            Object.entries(prices).forEach(([ticker, p]) => {
+                applyPriceToRow(ticker, p);
+            });
+        } catch(err) {}
+    };
+    es.onerror = () => {
+        // SSE disconnected — reconnects automatically, no action needed
+    };
+}
+
+// ─── LOAD AI ───
+async function loadAI(ticker) {
+    const btn    = document.getElementById('ai-btn-' + ticker);
+    const drawer = document.getElementById('ai-drawer-' + ticker);
+    const row    = document.getElementById('ai-row-' + ticker);
+
+    // Toggle if already open
+    if (drawer.classList.contains('open')) {
+        drawer.classList.remove('open');
+        row.style.display = 'none';
+        if (btn) btn.textContent = '◆ Analyze';
+        return;
+    }
+
+    if (btn) { btn.textContent = '⟳ Loading...'; btn.disabled = true; }
+    row.style.display = 'table-row';
+    drawer.classList.add('open');
+    drawer.innerHTML = '<div style="color:var(--muted);font-family:var(--mono);font-size:12px">Analyzing ' + ticker + '...</div>';
+
+    try {
+        const res  = await fetch('/api/ai/' + ticker);
+        const data = await res.json();
+        if (data.error === 'pro_required') {
+            drawer.innerHTML = '<div class="pro-lock-inline">AI requires a donation. <a href="/donate">Unlock for $5</a></div>';
+            return;
+        }
+        const s      = data.sections;
+        const sigTxt = (s.signal || '').toLowerCase();
+        const sigCls = sigTxt.includes('buy') ? 'ai-buy' : sigTxt.includes('watch') ? 'ai-watch' : 'ai-hold';
+        const sigLbl = sigTxt.includes('buy') ? 'BUY' : sigTxt.includes('watch') ? 'WATCH' : 'HOLD';
+        const sentCol= (s.sentiment||'').toLowerCase().includes('positive') ? 'var(--green)' : (s.sentiment||'').toLowerCase().includes('negative') ? 'var(--red)' : 'var(--orange)';
+        const sentWrd= (s.sentiment||'').toLowerCase().includes('positive') ? 'Positive' : (s.sentiment||'').toLowerCase().includes('negative') ? 'Negative' : 'Mixed';
+
+        drawer.innerHTML =
+            '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">' +
+            '<span class="ai-signal-badge ' + sigCls + '">' + sigLbl + '</span>' +
+            '<span style="font-family:var(--mono);font-size:11px;color:' + sentCol + '">● ' + sentWrd + ' Sentiment</span>' +
+            '</div>' +
+            (s.summary ? '<div class="ai-section-label">Summary</div><div class="ai-text">' + s.summary + '</div>' : '') +
+            (s.signal  ? '<div class="ai-section-label">Signal Reasoning</div><div class="ai-text">' + s.signal + '</div>' : '') +
+            (s.earnings_preview && !s.earnings_preview.includes('No earnings') ? '<div class="ai-section-label">Earnings Preview</div><div class="ai-text">' + s.earnings_preview + '</div>' : '') +
+            (s.trading_tip ? '<div class="ai-section-label">Trading Tip — ' + EXP_LEVEL + '</div><div class="ai-tip-box ai-text">' + s.trading_tip + '</div>' : '');
+
+        if (btn) { btn.textContent = '◆ Close'; btn.disabled = false; }
+    } catch(e) {
+        drawer.innerHTML = '<div style="color:var(--muted);font-size:12px">Analysis unavailable.</div>';
+        if (btn) { btn.textContent = '◆ Retry'; btn.disabled = false; }
+    }
+}
+
+// ─── ADD / REMOVE TICKER ───
+async function addTicker(e) {
+    e.preventDefault();
+    const input  = document.getElementById('add-input');
+    const ticker = input.value.trim().toUpperCase();
+    if (!ticker) return;
+    const fd = new FormData(); fd.append('ticker', ticker);
+    const res  = await fetch('/watchlist/add', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.success) { input.value = ''; window.location.reload(); }
+    else alert(data.error || 'Could not add ticker');
+}
+
+async function removeTicker(ticker) {
+    if (!confirm('Remove ' + ticker + '?')) return;
+    const fd = new FormData(); fd.append('ticker', ticker);
+    await fetch('/watchlist/remove', { method: 'POST', body: fd });
+    document.getElementById('row-' + ticker).remove();
+    const aiRow = document.getElementById('ai-row-' + ticker);
+    if (aiRow) aiRow.remove();
+}
+
+loadWatchlist();
+startLivePrices();
+{% endif %}
+
+// ─── LOAD EVERYTHING (parallel) ───
+Promise.all([loadIndices(), loadSectors(), loadNews(), loadVIX()]);
+
+initScrollSpy();
+
+// ─── AUTO REFRESH ───
+setInterval(() => Promise.all([loadIndices(), loadSectors()]), 5 * 60 * 1000);
+setInterval(loadNews, 10 * 60 * 1000);
+</script>
+</body>
+</html>
